@@ -25,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<ChatMessage> _messages = [
     ChatMessage(
-      text: '안녕하세요! 오늘 지출을 말씀해주세요',
+      text: '안녕하세요! 필요한 기능을 말씀해주세요',
       isUser: false,
     ),
   ];
@@ -33,6 +33,33 @@ class _HomeScreenState extends State<HomeScreen> {
   DateTime _selectedDay = DateTime.now();
   DateTime _focusedDay = DateTime.now();
   List<Transaction> _transactions = [];
+  Map<DateTime, double> _dailyExpenseMap = {};
+  Map<DateTime, double> _dailyIncomeMap = {};
+
+  DateTime _normalize(DateTime d) =>
+      DateTime(d.year, d.month, d.day);
+
+  // 거래내역은 토스트로 피드백받음
+  void _showToast(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+
+  // 캘린더 load
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isLoggedIn) {
+      _loadTransactions(_selectedDay);
+      _loadWeeklyTransactions(_focusedDay);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +105,9 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildCalendar(),
             Divider(height: 1),
             Expanded(
-              child: ChatMessageList(
+              child: widget.isLoggedIn
+                  ? _buildTransactionList()
+                  : ChatMessageList(
                 messages: _messages,
                 isTyping: _isTyping,
               ),
@@ -108,38 +137,85 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // 캘린더 위젯
   Widget _buildCalendar() {
-    return Container(
-      color: Colors.white,
-      child: TableCalendar(
-        firstDay: DateTime.utc(2020, 1, 1),
-        lastDay: DateTime.utc(2030, 12, 31),
-        focusedDay: _focusedDay,
-        selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-        onDaySelected: (selectedDay, focusedDay) {
-          setState(() {
-            _selectedDay = selectedDay;
-            _focusedDay = focusedDay;
-            _loadTransactions(selectedDay);
-          });
+    return TableCalendar(
+      firstDay: DateTime.utc(2020, 1, 1),
+      lastDay: DateTime.utc(2030, 12, 31),
+      focusedDay: _focusedDay,
+
+      selectedDayPredicate: (day) =>
+          isSameDay(_selectedDay, day),
+
+      onDaySelected: (selectedDay, focusedDay) {
+        setState(() {
+          _selectedDay = selectedDay;
+          _focusedDay = focusedDay;
+        });
+        _loadTransactions(selectedDay);
+      },
+
+      onPageChanged: (focusedDay) {
+        _focusedDay = focusedDay;
+        _loadWeeklyTransactions(focusedDay);
+      },
+
+      calendarFormat: CalendarFormat.week,
+
+      calendarBuilders: CalendarBuilders(
+        markerBuilder: (context, day, events) {
+          final date = _normalize(day);
+          final expense = _dailyExpenseMap[date];
+          final income = _dailyIncomeMap[date];
+
+          if (expense == null && income == null) return null;
+
+          return Positioned(
+            bottom: 2,
+            child: Column(
+              children: [
+                if (expense != null && expense > 0)
+                  Text(
+                    '-${expense.toInt()}',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                if (income != null && income > 0)
+                  Text(
+                    '+${income.toInt()}',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+              ],
+            ),
+          );
         },
-        calendarFormat: CalendarFormat.week,
-        headerStyle: const HeaderStyle(
-          formatButtonVisible: false,
-          titleCentered: true,
+      ),
+
+
+
+      headerStyle: const HeaderStyle(
+        formatButtonVisible: false,
+        titleCentered: true,
+      ),
+
+      calendarStyle: CalendarStyle(
+        todayDecoration: BoxDecoration(
+          color: Colors.blue.withOpacity(0.3),
+          shape: BoxShape.circle,
         ),
-        calendarStyle: CalendarStyle(
-          todayDecoration: BoxDecoration(
-            color: Colors.blue.withOpacity(0.3),
-            shape: BoxShape.circle,
-          ),
-          selectedDecoration: const BoxDecoration(
-            color: Color(0xFF3498DB),
-            shape: BoxShape.circle,
-          ),
+        selectedDecoration: const BoxDecoration(
+          color: Color(0xFF3498DB),
+          shape: BoxShape.circle,
         ),
       ),
     );
   }
+
 
   // 거래내역 리스트
   Widget _buildTransactionList() {
@@ -211,51 +287,146 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_chatController.text.trim().isEmpty) return;
 
     final userMessage = _chatController.text;
-    setState(() {
-      _messages.add(ChatMessage(text: userMessage, isUser: true));
-      _isTyping = true;
-    });
     _chatController.clear();
+
+    // 로그인 전만 사용자 메시지 보여줌
+    if (!widget.isLoggedIn) {
+      setState(() {
+        _messages.add(ChatMessage(text: userMessage, isUser: true));
+        _isTyping = true;
+      });
+    } else {
+      setState(() {
+        _isTyping = true;
+      });
+    }
 
     try {
       final response = await _chatService.sendMessage(userMessage);
       if (!mounted) return;
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          _isTyping = false;
-          _messages.add(ChatMessage(
-            text: data['reply'] ?? '응답을 받았습니다.',
-            isUser: false,
-          ));
-        });
 
-        // 거래내역 저장 성공시 새로고침
+      final data = jsonDecode(response.body);
+      final reply = data['reply'] ?? '처리되었습니다';
+
+      setState(() {
+        _isTyping = false;
+      });
+
+      if (response.statusCode == 200) {
         if (widget.isLoggedIn) {
+          //  로그인 후: 토스트 + UI 갱신
+          _showToast(reply);
           _loadTransactions(_selectedDay);
+          _loadWeeklyTransactions(_focusedDay);
+        } else {
+          //  로그인 전: 챗봇 말풍선
+          setState(() {
+            _messages.add(ChatMessage(
+              text: reply,
+              isUser: false,
+            ));
+          });
         }
       } else {
-        setState(() {
-          _isTyping = false;
-          _messages.add(ChatMessage(
-            text: '에러가 발생했습니다.',
-            isUser: false,
-          ));
-        });
+        _showToast('처리에 실패했어요');
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isTyping = false;
-          _messages.add(ChatMessage(
-            text: '네트워크 오류가 발생했습니다.',
-            isUser: false,
-          ));
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        _isTyping = false;
+      });
+
+      _showToast('네트워크 오류가 발생했습니다');
       print('채팅 에러: $e');
     }
   }
+
+      // void _loadMonthlyTransactions(DateTime month) async {
+  //   final mid = await _authService.getMid();
+  //   if (mid == null) return;
+  //
+  //   final response = await _transactionService.getListByDay(
+  //     mid: mid,
+  //     year: month.year,
+  //     month: month.month,
+  //   );
+  //
+  //   if (response.statusCode == 200) {
+  //     final body = jsonDecode(response.body);
+  //     final List list = body['dtoList'] ?? [];
+  //
+  //     final Map<DateTime, double> expenseMap = {};
+  //     final Map<DateTime, double> incomeMap = {};
+  //
+  //     for (final e in list) {
+  //       final date = _normalize(DateTime.parse(e['date']));
+  //       final amount = (e['amount'] as num).toDouble();
+  //       final type = e['type'].toString().toUpperCase();
+  //
+  //       if (type == 'EXPENSE') {
+  //         expenseMap[date] = (expenseMap[date] ?? 0) + amount;
+  //       } else if (type == 'INCOME') {
+  //         incomeMap[date] = (incomeMap[date] ?? 0) + amount;
+  //       }
+  //     }
+  //
+  //     setState(() {
+  //       _dailyExpenseMap = expenseMap;
+  //       _dailyIncomeMap = incomeMap;
+  //     });
+  //   }
+  // }
+
+
+  // 주간 데이터 로딩
+  void _loadWeeklyTransactions(DateTime focusedDay) async {
+    final mid = await _authService.getMid();
+    if (mid == null) return;
+
+    final startOfWeek =
+    focusedDay.subtract(Duration(days: focusedDay.weekday % 7));
+
+    final Map<DateTime, double> expenseMap = {};
+    final Map<DateTime, double> incomeMap = {};
+
+    for (int i = 0; i < 7; i++) {
+      final day = startOfWeek.add(Duration(days: i));
+      final dateKey = _normalize(day);
+
+      final dateStr =
+          '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+
+      final response = await _transactionService.getListByDay(
+        mid: mid,
+        date: dateStr,
+        page: 1,
+        size: 100,
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        final List list = body['dtoList'] ?? [];
+
+        for (final e in list) {
+          final amount = (e['amount'] as num).toDouble();
+          final type = e['type'].toString().toUpperCase();
+
+          if (type == 'EXPENSE') {
+            expenseMap[dateKey] = (expenseMap[dateKey] ?? 0) + amount;
+          } else if (type == 'INCOME') {
+            incomeMap[dateKey] = (incomeMap[dateKey] ?? 0) + amount;
+          }
+        }
+      }
+    }
+
+    setState(() {
+      _dailyExpenseMap = expenseMap;
+      _dailyIncomeMap = incomeMap;
+    });
+  }
+
 
   // 거래내역 로드 (API 호출)
   void _loadTransactions(DateTime date) async {
@@ -310,8 +481,6 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     }
   }
-
-
 
   @override
   void dispose() {
