@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'home_screen.dart';
 import 'signup_screen.dart';
+import '../services/auth_service.dart';
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,8 +13,9 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
   bool _isLoading = false;
   bool _obscurePassword = true;
 
@@ -33,17 +37,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: Color(0xFF3498DB).withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    Icons.account_balance_wallet,
-                    size: 80,
-                    color: Color(0xFF3498DB),
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    width: 250,
+                    fit: BoxFit.contain,
                   ),
                 ),
                 const SizedBox(height: 24),
 
                 // 타이틀
                 Text(
-                  'CashTalk',
+                  '캐시톡',
                   style: TextStyle(
                     fontSize: 36,
                     fontWeight: FontWeight.bold,
@@ -57,17 +61,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.grey[600],
+                    fontFamily: 'Pretendard',
                   ),
                 ),
                 const SizedBox(height: 48),
 
-                // 이메일 입력
+                // 아이디 입력
                 TextField(
-                  controller: _emailController,
+                  controller: _usernameController,
                   decoration: InputDecoration(
-                    labelText: '이메일',
-                    hintText: 'example@email.com',
-                    prefixIcon: Icon(Icons.email_outlined),
+                    labelText: '아이디',
+                    hintText: '아이디를 입력하세요',
+                    prefixIcon: Icon(Icons.face_4_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -82,7 +87,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderSide: BorderSide(color: Color(0xFF3498DB), width: 2),
                     ),
                   ),
-                  keyboardType: TextInputType.emailAddress,
+                  keyboardType: TextInputType.text,
+                  style: TextStyle(
+                    fontFamily: 'Pretendard',
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -118,6 +126,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   obscureText: _obscurePassword,
+                  style: TextStyle(
+                    fontFamily: 'Pretendard',
+                  ),
                 ),
                 const SizedBox(height: 24),
 
@@ -162,7 +173,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 // 비밀번호 찾기
                 TextButton(
                   onPressed: () {
-                    // TODO: 비밀번호 찾기
                     _showSnackBar('비밀번호 찾기 기능은 준비중입니다');
                   },
                   child: Text(
@@ -231,8 +241,8 @@ class _LoginScreenState extends State<LoginScreen> {
   // 로그인 처리
   void _handleLogin() async {
     // 입력 검증
-    if (_emailController.text.trim().isEmpty) {
-      _showSnackBar('이메일을 입력해주세요');
+    if (_usernameController.text.trim().isEmpty) {
+      _showSnackBar('아이디를 입력해주세요');
       return;
     }
     if (_passwordController.text.trim().isEmpty) {
@@ -245,29 +255,37 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // TODO: 실제 API 호출
-      // final response = await http.post(
-      //   Uri.parse('https://your-api.com/login'),
-      //   headers: {'Content-Type': 'application/json'},
-      //   body: jsonEncode({
-      //     'email': _emailController.text,
-      //     'password': _passwordController.text,
-      //   }),
-      // );
+      // API 호출
+      final response = await _authService.loginService({
+        'username': _usernameController.text.trim(),
+        'password': _passwordController.text.trim(),
+      });
 
-      // 임시: 2초 대기
-      await Future.delayed(Duration(seconds: 2));
+      if (!mounted) return;
 
-      // 로그인 성공
-      if (mounted) {
-        _showSnackBar('로그인 성공!');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        // 토큰 저장
+        if (data['token'] != null) {
+          await _authService.saveToken(data['token']);
+        }
+        _showSnackBar('로그인에 성공했습니다.');
+
+        // 홈 화면으로 이동
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
+      } else {
+        // 로그인 실패
+        _showSnackBar('아이디 또는 비밀번호가 올바르지 않습니다.');
       }
     } catch (e) {
-      _showSnackBar('로그인에 실패했습니다. 다시 시도해주세요.');
+      if (mounted) {
+        _showSnackBar('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
+      }
+      print('로그인 에러: $e');  // 디버깅용
     } finally {
       if (mounted) {
         setState(() {
@@ -292,7 +310,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }

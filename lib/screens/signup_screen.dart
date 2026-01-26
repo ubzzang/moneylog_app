@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import '../services/auth_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -9,13 +11,16 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _nicknameController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
+  final AuthService _authService = AuthService();  // 추가!
+
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _agreedToTerms = false;
+  bool? _usernameAvailable;  // 아이디 중복 체크 결과
 
   @override
   Widget build(BuildContext context) {
@@ -95,9 +100,9 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               const SizedBox(height: 20),
 
-              // 이메일 입력
+              // 닉네임 입력 (추가!)
               Text(
-                '이메일',
+                '닉네임',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -106,10 +111,10 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               const SizedBox(height: 8),
               TextField(
-                controller: _emailController,
+                controller: _nicknameController,
                 decoration: InputDecoration(
-                  hintText: 'example@email.com',
-                  prefixIcon: Icon(Icons.email_outlined),
+                  hintText: '닉네임을 입력하세요',
+                  prefixIcon: Icon(Icons.badge_outlined),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -124,8 +129,81 @@ class _SignupScreenState extends State<SignupScreen> {
                     borderSide: BorderSide(color: Color(0xFF3498DB), width: 2),
                   ),
                 ),
-                keyboardType: TextInputType.emailAddress,
               ),
+              const SizedBox(height: 20),
+
+              // 아이디 입력 (변경!)
+              Text(
+                '아이디',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2C3E50),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _usernameController,
+                      decoration: InputDecoration(
+                        hintText: '아이디를 입력하세요',
+                        prefixIcon: Icon(Icons.account_circle_outlined),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Color(0xFF3498DB), width: 2),
+                        ),
+                      ),
+                      onChanged: (value) {
+                        // 아이디 입력 변경시 중복체크 결과 초기화
+                        setState(() {
+                          _usernameAvailable = null;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: _checkUsername,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFF3498DB),
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text('중복확인'),
+                  ),
+                ],
+              ),
+              // 중복 체크 결과 표시
+              if (_usernameAvailable == true)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, left: 12),
+                  child: Text(
+                    '사용 가능한 아이디입니다.',
+                    style: TextStyle(color: Colors.green, fontSize: 12),
+                  ),
+                ),
+              if (_usernameAvailable == false)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, left: 12),
+                  child: Text(
+                    '이미 존재하는 아이디입니다.',
+                    style: TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ),
               const SizedBox(height: 20),
 
               // 비밀번호 입력
@@ -141,7 +219,7 @@ class _SignupScreenState extends State<SignupScreen> {
               TextField(
                 controller: _passwordController,
                 decoration: InputDecoration(
-                  hintText: '8자 이상 입력하세요',
+                  hintText: '비밀번호를 입력하세요.',
                   prefixIcon: Icon(Icons.lock_outlined),
                   suffixIcon: IconButton(
                     icon: Icon(
@@ -212,63 +290,23 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
                 obscureText: _obscureConfirmPassword,
               ),
-              const SizedBox(height: 24),
-
-              // 약관 동의
-              Row(
-                children: [
-                  Checkbox(
-                    value: _agreedToTerms,
-                    onChanged: (value) {
-                      setState(() {
-                        _agreedToTerms = value ?? false;
-                      });
-                    },
-                    activeColor: Color(0xFF3498DB),
-                  ),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _agreedToTerms = !_agreedToTerms;
-                        });
-                      },
-                      child: Text.rich(
-                        TextSpan(
-                          text: '서비스 이용약관',
-                          style: TextStyle(
-                            color: Color(0xFF3498DB),
-                            fontWeight: FontWeight.bold,
-                          ),
-                          children: [
-                            TextSpan(
-                              text: ' 및 ',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontWeight: FontWeight.normal,
-                              ),
-                            ),
-                            TextSpan(
-                              text: '개인정보 처리방침',
-                              style: TextStyle(
-                                color: Color(0xFF3498DB),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            TextSpan(
-                              text: '에 동의합니다',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontWeight: FontWeight.normal,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+              // 비밀번호 일치 여부 표시
+              if (_confirmPasswordController.text.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, left: 12),
+                  child: Text(
+                    _passwordController.text == _confirmPasswordController.text
+                        ? '비밀번호가 일치합니다.'
+                        : '비밀번호가 일치하지 않습니다.',
+                    style: TextStyle(
+                      color: _passwordController.text == _confirmPasswordController.text
+                          ? Colors.green
+                          : Colors.red,
+                      fontSize: 12,
                     ),
                   ),
-                ],
-              ),
+                ),
+
               const SizedBox(height: 32),
 
               // 회원가입 버튼
@@ -276,7 +314,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: (_isLoading || !_agreedToTerms) ? null : _handleSignup,
+                  onPressed: _isLoading ? null : _handleSignup,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color(0xFF3498DB),
                     foregroundColor: Colors.white,
@@ -338,6 +376,30 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
+  // 아이디 중복 체크
+  void _checkUsername() async {
+    if (_usernameController.text.trim().isEmpty) {
+      _showSnackBar('아이디를 입력해주세요');
+      return;
+    }
+
+    try {
+      final response = await _authService.checkUsernameService(
+        _usernameController.text.trim(),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _usernameAvailable = data['available'] ?? false;
+        });
+      }
+    } catch (e) {
+      _showSnackBar('중복 확인에 실패했습니다.');
+      print('중복 체크 에러: $e');
+    }
+  }
+
   // 회원가입 처리
   void _handleSignup() async {
     // 입력 검증
@@ -345,12 +407,16 @@ class _SignupScreenState extends State<SignupScreen> {
       _showSnackBar('이름을 입력해주세요');
       return;
     }
-    if (_emailController.text.trim().isEmpty) {
-      _showSnackBar('이메일을 입력해주세요');
+    if (_nicknameController.text.trim().isEmpty) {
+      _showSnackBar('닉네임을 입력해주세요');
       return;
     }
-    if (_passwordController.text.length < 8) {
-      _showSnackBar('비밀번호는 8자 이상이어야 합니다');
+    if (_usernameController.text.trim().isEmpty) {
+      _showSnackBar('아이디를 입력해주세요');
+      return;
+    }
+    if (_usernameAvailable != true) {
+      _showSnackBar('아이디 중복 확인을 해주세요');
       return;
     }
     if (_passwordController.text != _confirmPasswordController.text) {
@@ -363,28 +429,29 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     try {
-      // TODO: 실제 API 호출
-      // final response = await http.post(
-      //   Uri.parse('https://your-api.com/signup'),
-      //   headers: {'Content-Type': 'application/json'},
-      //   body: jsonEncode({
-      //     'name': _nameController.text,
-      //     'email': _emailController.text,
-      //     'password': _passwordController.text,
-      //   }),
-      // );
+      final response = await _authService.registerService({
+        'username': _usernameController.text.trim(),
+        'password': _passwordController.text.trim(),
+        'name': _nameController.text.trim(),
+        'nickname': _nicknameController.text.trim(),
+      });
 
-      // 임시: 2초 대기
-      await Future.delayed(Duration(seconds: 2));
+      if (!mounted) return;
 
-      // 회원가입 성공
-      if (mounted) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         _showSnackBar('회원가입이 완료되었습니다!');
         await Future.delayed(Duration(seconds: 1));
         Navigator.pop(context);
+      } else if (response.statusCode == 409) {
+        _showSnackBar('이미 존재하는 아이디입니다.');
+      } else {
+        _showSnackBar('회원가입에 실패했습니다.');
       }
     } catch (e) {
-      _showSnackBar('회원가입에 실패했습니다. 다시 시도해주세요.');
+      if (mounted) {
+        _showSnackBar('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
+      }
+      print('회원가입 에러: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -410,7 +477,8 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _emailController.dispose();
+    _nicknameController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
