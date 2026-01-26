@@ -34,7 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   padding: EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Color(0xFF3498DB).withOpacity(0.1),
+                    color: Color(0xFF4C7BED).withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Image.asset(
@@ -84,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Color(0xFF3498DB), width: 2),
+                      borderSide: BorderSide(color: Color(0xFF4C7BED), width: 2),
                     ),
                   ),
                   keyboardType: TextInputType.text,
@@ -122,7 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Color(0xFF3498DB), width: 2),
+                      borderSide: BorderSide(color: Color(0xFF4C7BED), width: 2),
                     ),
                   ),
                   obscureText: _obscurePassword,
@@ -139,7 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _handleLogin,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF3498DB),
+                      backgroundColor: Color(0xFF4C7BED),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -214,8 +214,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       );
                     },
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Color(0xFF3498DB),
-                      side: BorderSide(color: Color(0xFF3498DB), width: 2),
+                      foregroundColor: Color(0xFF4C7BED),
+                      side: BorderSide(color: Color(0xFF4C7BED), width: 2),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),

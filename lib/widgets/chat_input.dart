@@ -51,7 +51,7 @@ class ChatInput extends StatelessWidget {
             SizedBox(width: 8),
             Container(
               decoration: BoxDecoration(
-                color: Color(0xFF3498DB),
+                color: Color(0xFF4C7BED),
                 shape: BoxShape.circle,
               ),
               child: IconButton(

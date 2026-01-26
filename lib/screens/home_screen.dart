@@ -68,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Color(0xFF3498DB),
+        backgroundColor: Color(0xFF4C7BED),
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -221,7 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
           shape: BoxShape.circle,
         ),
         selectedDecoration: const BoxDecoration(
-          color: Color(0xFF3498DB),
+          color: Color(0xFF4C7BED),
           shape: BoxShape.circle,
         ),
       ),
@@ -274,20 +274,23 @@ class _HomeScreenState extends State<HomeScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: isIncome ? Colors.green[100] : Colors.red[100],
+          backgroundColor: isIncome ? Colors.green[100] : Colors.red[50],
           child: Icon(
-            isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-            color: isIncome ? Colors.green : Colors.red,
+            isIncome ? Icons.arrow_upward : Icons.payment_sharp,
+            color: isIncome ? const Color(0xFF3C76F1) : const Color(0xFFFB5D76),
           ),
         ),
         title: Text(transaction.category),
-        subtitle: Text(transaction.memo),
+        subtitle: Text(transaction.memo,
+          style: TextStyle(
+            fontFamily: 'Pretendard',
+          )),
         trailing: Text(
           '${isIncome ? '+' : '-'}${transaction.amount.toStringAsFixed(0)}원',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: isIncome ? Colors.green : Colors.red,
+            color: isIncome ? const Color(0xFF3C76F1) :  const Color(0xFFFB5D76),
           ),
         ),
       ),

@@ -139,15 +139,14 @@ class ChatMessageList extends StatelessWidget {
         children: [
           if (!isUser) ...[
             CircleAvatar(
-              backgroundColor: Color(0xFF3498DB),
               radius: 18,
-              child: Icon(
-                Icons.smart_toy,
-                size: 20,
-                color: Colors.white,
+              backgroundColor: Colors.transparent,
+              child: Image.asset(
+                'assets/images/cat.png',
+                fit: BoxFit.contain,
               ),
             ),
-            SizedBox(width: 8),
+            const SizedBox(width: 8),
           ],
           Flexible(
             child: Container(

@@ -95,7 +95,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Color(0xFF3498DB), width: 2),
+                    borderSide: BorderSide(color: Color(0xFF4C7BED), width: 2),
                   ),
                 ),
               ),
@@ -127,7 +127,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Color(0xFF3498DB), width: 2),
+                    borderSide: BorderSide(color: Color(0xFF4C7BED), width: 2),
                   ),
                 ),
               ),
@@ -162,7 +162,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Color(0xFF3498DB), width: 2),
+                          borderSide: BorderSide(color: Color(0xFF4C7BED), width: 2),
                         ),
                       ),
                       onChanged: (value) {
@@ -177,7 +177,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   ElevatedButton(
                     onPressed: _checkUsername,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF3498DB),
+                      backgroundColor: Color(0xFF4C7BED),
                       foregroundColor: Colors.white,
                       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                       shape: RoundedRectangleBorder(
@@ -243,7 +243,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Color(0xFF3498DB), width: 2),
+                    borderSide: BorderSide(color: Color(0xFF4C7BED), width: 2),
                   ),
                 ),
                 obscureText: _obscurePassword,
@@ -286,7 +286,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Color(0xFF3498DB), width: 2),
+                    borderSide: BorderSide(color: Color(0xFF4C7BED), width: 2),
                   ),
                 ),
                 obscureText: _obscureConfirmPassword,
@@ -317,7 +317,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _handleSignup,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF3498DB),
+                    backgroundColor: Color(0xFF4C7BED),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -363,7 +363,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     child: Text(
                       '로그인',
                       style: TextStyle(
-                        color: Color(0xFF3498DB),
+                        color: Color(0xFF4C7BED),
                         fontWeight: FontWeight.bold,
                       ),
                     ),

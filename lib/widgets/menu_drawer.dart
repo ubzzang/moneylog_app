@@ -113,12 +113,12 @@ class MenuDrawer extends StatelessWidget {
           ),
           SizedBox(height: 12),
           Text(
-            isLoggedIn ? '환영합니다!' : 'CashTalk',
+            isLoggedIn ? '환영합니다!' : '캐시톡',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: Colors.white,
-              fontFamily: 'GmarketSans',
+              fontFamily: 'Pretendard',
             ),
           ),
           if (!isLoggedIn)
@@ -126,6 +126,7 @@ class MenuDrawer extends StatelessWidget {
               'AI 가계부 서비스',
               style: TextStyle(
                 fontSize: 14,
+                fontFamily: 'Pretendard',
                 color: Colors.white.withOpacity(0.9),
               ),
             ),
@@ -172,6 +173,9 @@ class MenuDrawer extends StatelessWidget {
           'AI와 함께하는 스마트 가계부\n\n'
               '자연스러운 대화로 수입과 지출을 관리하세요.\n\n'
               'Version 1.0.0',
+          style: TextStyle(
+            fontFamily: 'Pretendard',
+          ),
         ),
         actions: [
           TextButton(

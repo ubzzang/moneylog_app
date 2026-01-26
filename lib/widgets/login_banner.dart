@@ -10,16 +10,16 @@ class LoginBanner extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Color(0xFF3498DB).withOpacity(0.1),
+        color: Color(0xFF4C7BED).withOpacity(0.1),
         border: Border(
           bottom: BorderSide(
-            color: Color(0xFF3498DB).withOpacity(0.3),
+            color: Color(0xFF4C7BED).withOpacity(0.3),
           ),
         ),
       ),
       child: Row(
         children: [
-          Icon(Icons.info_outline, color: Color(0xFF3498DB)),
+          Icon(Icons.info_outline, color: Color(0xFF4C7BED)),
           SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -40,7 +40,7 @@ class LoginBanner extends StatelessWidget {
             child: Text(
               '로그인',
               style: TextStyle(
-                color: Color(0xFF3498DB),
+                color: Color(0xFF4C7BED),
                 fontWeight: FontWeight.bold,
               ),
             ),
