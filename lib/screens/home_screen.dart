@@ -35,6 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Transaction> _transactions = [];
   Map<DateTime, double> _dailyExpenseMap = {};
   Map<DateTime, double> _dailyIncomeMap = {};
+  bool _showChatInsteadOfList = true;
 
   DateTime _normalize(DateTime d) =>
       DateTime(d.year, d.month, d.day);
@@ -56,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     if (widget.isLoggedIn) {
+      _showChatInsteadOfList = false;
       _loadTransactions(_selectedDay);
       _loadWeeklyTransactions(_focusedDay);
     }
@@ -86,6 +88,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: Icon(_showChatInsteadOfList ? Icons.list : Icons.chat),
+            onPressed: () {
+              setState(() {
+                _showChatInsteadOfList = !_showChatInsteadOfList;
+              });
+            },
+          ),
           Builder(
             builder: (context) => IconButton(
               icon: Icon(Icons.menu),
@@ -95,24 +105,26 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ],
+
       ),
       endDrawer: MenuDrawer(isLoggedIn: widget.isLoggedIn),
       body: Column(
         children: [
           // 로그인 여부에 따라 다른 화면
           if (widget.isLoggedIn) ...[
-            // 로그인 했을때
             _buildCalendar(),
-            Divider(height: 1),
+            const Divider(height: 1),
+
             Expanded(
-              child: widget.isLoggedIn
-                  ? _buildTransactionList()
-                  : ChatMessageList(
+              child: _showChatInsteadOfList
+                  ? ChatMessageList(
                 messages: _messages,
                 isTyping: _isTyping,
-              ),
+              )
+                  : _buildTransactionList(),
             ),
-          ] else ...[
+          ]
+          else ...[
             // 로그인 안했을때
             LoginBanner(),
             Expanded(
