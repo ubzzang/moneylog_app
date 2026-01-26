@@ -1,23 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:moneylog_app/screens/chat_message_list.dart';
+import 'package:moneylog_app/services/auth_service.dart';
+import 'package:moneylog_app/services/transaction_service.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'dart:convert';
 import '../models/chat_message.dart';
 import '../widgets/login_banner.dart';
 import '../widgets/chat_input.dart';
 import '../widgets/menu_drawer.dart';
+import '../services/chat_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool isLoggedIn;
-
   const HomeScreen({super.key, this.isLoggedIn = false});
-
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _chatController = TextEditingController();
-  final List<ChatMessage> _messages = [];
+  final ChatService _chatService = ChatService();
+  final TransactionService _transactionService = TransactionService();
+  final AuthService _authService = AuthService();
+
+  final List<ChatMessage> _messages = [
+    ChatMessage(
+      text: '안녕하세요! 오늘 지출을 말씀해주세요',
+      isUser: false,
+    ),
+  ];
+  bool _isTyping = false;
   DateTime _selectedDay = DateTime.now();
   DateTime _focusedDay = DateTime.now();
   List<Transaction> _transactions = [];
@@ -37,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Icon(Icons.account_balance_wallet, size: 28),
             SizedBox(width: 8),
             Text(
-              'CashTalk',
+              '캐시톡',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -62,14 +74,24 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           // 로그인 여부에 따라 다른 화면
           if (widget.isLoggedIn) ...[
-            // 로그인 O: 캘린더 + 거래내역 + 챗봇
+            // 로그인 했을때
             _buildCalendar(),
             Divider(height: 1),
-            Expanded(child: _buildTransactionList()),
+            Expanded(
+              child: ChatMessageList(
+                messages: _messages,
+                isTyping: _isTyping,
+              ),
+            ),
           ] else ...[
-            // 로그인 X: 로그인 배너 + 챗봇만
+            // 로그인 안했을때
             LoginBanner(),
-            Expanded(child: ChatMessageList(messages: _messages)),
+            Expanded(
+              child: ChatMessageList(
+                messages: _messages,
+                isTyping: _isTyping,
+              ),
+            ),
           ],
 
           Divider(height: 1),
@@ -97,7 +119,6 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _selectedDay = selectedDay;
             _focusedDay = focusedDay;
-            // TODO: 선택한 날짜의 거래내역 API 호출
             _loadTransactions(selectedDay);
           });
         },
@@ -186,50 +207,111 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // 메시지 전송
-  void _sendMessage() {
+  void _sendMessage() async {
     if (_chatController.text.trim().isEmpty) return;
 
     final userMessage = _chatController.text;
     setState(() {
       _messages.add(ChatMessage(text: userMessage, isUser: true));
+      _isTyping = true;
     });
     _chatController.clear();
 
-    // TODO: API 호출
-    // 임시 응답
-    Future.delayed(Duration(seconds: 1), () {
-      if (mounted) {
+    try {
+      final response = await _chatService.sendMessage(userMessage);
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
         setState(() {
-          if (widget.isLoggedIn) {
-            _messages.add(ChatMessage(
-              text: '거래 내역을 기록했어요! 😊',
-              isUser: false,
-            ));
-            // 임시: 테스트 거래내역 추가
-            _transactions.add(Transaction(
-              id: DateTime.now().toString(),
-              date: _selectedDay,
-              type: 'expense',
-              amount: 8000,
-              category: '식비',
-              memo: userMessage,
-            ));
-          } else {
-            _messages.add(ChatMessage(
-              text: '로그인하시면 거래내역을 저장할 수 있어요!',
-              isUser: false,
-            ));
-          }
+          _isTyping = false;
+          _messages.add(ChatMessage(
+            text: data['reply'] ?? '응답을 받았습니다.',
+            isUser: false,
+          ));
+        });
+
+        // 거래내역 저장 성공시 새로고침
+        if (widget.isLoggedIn) {
+          _loadTransactions(_selectedDay);
+        }
+      } else {
+        setState(() {
+          _isTyping = false;
+          _messages.add(ChatMessage(
+            text: '에러가 발생했습니다.',
+            isUser: false,
+          ));
         });
       }
-    });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isTyping = false;
+          _messages.add(ChatMessage(
+            text: '네트워크 오류가 발생했습니다.',
+            isUser: false,
+          ));
+        });
+      }
+      print('채팅 에러: $e');
+    }
   }
 
   // 거래내역 로드 (API 호출)
-  void _loadTransactions(DateTime date) {
-    // TODO: API에서 데이터 가져오기
-    print('${date.year}-${date.month}-${date.day} 거래내역 로드');
+  void _loadTransactions(DateTime date) async {
+    final dateStr =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+    try {
+      final mid = await _authService.getMid();
+
+      if (mid == null) {
+        print('mid 없음 - 로그인 필요');
+        setState(() {
+          _transactions = [];
+        });
+        return;
+      }
+
+      final response = await _transactionService.getListByDay(
+        mid: mid,
+        date: dateStr,
+        page: 1,
+        size: 100,
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        final List list = body['dtoList'] ?? [];
+
+        final parsed = list.map((e) {
+          return Transaction(
+            id: e['id'].toString(),
+            date: DateTime.parse(e['date']),
+            type: e['type'], // INCOME / EXPENSE
+            amount: (e['amount'] as num).toDouble(),
+            category: e['category'] ?? '기타',
+            memo: e['memo'] ?? '',
+          );
+        }).toList();
+
+        setState(() {
+          _transactions = parsed;
+        });
+      } else {
+        setState(() {
+          _transactions = [];
+        });
+      }
+    } catch (e) {
+      print('거래내역 로드 실패: $e');
+      setState(() {
+        _transactions = [];
+      });
+    }
   }
+
+
 
   @override
   void dispose() {

@@ -3,10 +3,12 @@ import '../models/chat_message.dart';
 
 class ChatMessageList extends StatelessWidget {
   final List<ChatMessage> messages;
+  final bool isTyping;  // 추가!
 
   const ChatMessageList({
     super.key,
     required this.messages,
+    this.isTyping = false,  // 추가!
   });
 
   @override
@@ -17,9 +19,73 @@ class ChatMessageList extends StatelessWidget {
 
     return ListView.builder(
       padding: EdgeInsets.all(16),
-      itemCount: messages.length,
+      itemCount: messages.length + (isTyping ? 1 : 0),  // 타이핑 중이면 +1
       itemBuilder: (context, index) {
+        if (index == messages.length && isTyping) {
+          return _buildTypingIndicator();
+        }
         return _buildMessageItem(messages[index]);
+      },
+    );
+  }
+
+  // 타이핑 인디케이터
+  Widget _buildTypingIndicator() {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            backgroundColor: Color(0xFF3498DB),
+            radius: 18,
+            child: Icon(
+              Icons.smart_toy,
+              size: 20,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(width: 8),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildDot(0),
+                SizedBox(width: 4),
+                _buildDot(1),
+                SizedBox(width: 4),
+                _buildDot(2),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 타이핑 점
+  Widget _buildDot(int index) {
+    return TweenAnimationBuilder(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 600),
+      builder: (context, double value, child) {
+        return Opacity(
+          opacity: (value * 2 - index * 0.3).clamp(0.3, 1.0),
+          child: Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: Colors.grey[600],
+              shape: BoxShape.circle,
+            ),
+          ),
+        );
       },
     );
   }

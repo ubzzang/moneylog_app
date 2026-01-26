@@ -16,7 +16,8 @@ class MyApp extends StatelessWidget {
         fontFamily: 'GmarketSans',
         primaryColor: Color(0xFF3498DB),
       ),
-      home: const HomeScreen(isLoggedIn: false),
+      //home: const HomeScreen(isLoggedIn: false),
+      home: const HomeScreen(),
     );
   }
 }

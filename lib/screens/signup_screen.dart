@@ -64,6 +64,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey[600],
+                  fontFamily: 'Pretendard'
                 ),
               ),
               const SizedBox(height: 32),

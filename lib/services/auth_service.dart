@@ -32,6 +32,18 @@ class AuthService {
     );
   }
 
+  // mid 저장
+  Future<void> saveMid(int mid) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('mid', mid);
+  }
+
+  // mid 조회
+  Future<int?> getMid() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('mid');
+  }
+
   // 토큰 저장
   Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();

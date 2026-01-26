@@ -270,12 +270,18 @@ class _LoginScreenState extends State<LoginScreen> {
         if (data['token'] != null) {
           await _authService.saveToken(data['token']);
         }
+
+        if (data['id'] != null) {
+          await _authService.saveMid(data['id']);
+        }
         _showSnackBar('로그인에 성공했습니다.');
 
-        // 홈 화면으로 이동
+        // 로그인 후 홈화면으로 이동
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          MaterialPageRoute(
+            builder: (context) => const HomeScreen(isLoggedIn: true),  // 수정!
+          ),
         );
       } else {
         // 로그인 실패
@@ -285,7 +291,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         _showSnackBar('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
       }
-      print('로그인 에러: $e');  // 디버깅용
+      print('로그인 에러: $e');
     } finally {
       if (mounted) {
         setState(() {
