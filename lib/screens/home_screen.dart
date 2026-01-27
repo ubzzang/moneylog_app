@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:moneylog_app/screens/chat_message_list.dart';
+import 'package:moneylog_app/screens/chat_screen.dart';
+import 'package:moneylog_app/screens/statistics_screen.dart';
 import 'package:moneylog_app/services/auth_service.dart';
 import 'package:moneylog_app/services/transaction_service.dart';
+import 'package:moneylog_app/services/chat_service.dart';
+import 'package:moneylog_app/widgets/common_appbar.dart';
+import 'package:moneylog_app/widgets/chat_input.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'dart:convert';
-import '../models/chat_message.dart';
 import '../widgets/login_banner.dart';
-import '../widgets/chat_input.dart';
 import '../widgets/menu_drawer.dart';
-import '../services/chat_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool isLoggedIn;
@@ -18,405 +19,675 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final TextEditingController _chatController = TextEditingController();
-  final ChatService _chatService = ChatService();
   final TransactionService _transactionService = TransactionService();
   final AuthService _authService = AuthService();
+  final ChatService _chatService = ChatService();
+  final TextEditingController _chatController = TextEditingController();
 
-  final List<ChatMessage> _messages = [
-    ChatMessage(
-      text: '안녕하세요! 필요한 기능을 말씀해주세요',
-      isUser: false,
-    ),
-  ];
-  bool _isTyping = false;
   DateTime _selectedDay = DateTime.now();
   DateTime _focusedDay = DateTime.now();
   List<Transaction> _transactions = [];
   Map<DateTime, double> _dailyExpenseMap = {};
   Map<DateTime, double> _dailyIncomeMap = {};
-  bool _showChatInsteadOfList = true;
 
-  DateTime _normalize(DateTime d) =>
-      DateTime(d.year, d.month, d.day);
+  // 월간 통계
+  double _monthlyIncome = 0;
+  double _monthlyExpense = 0;
 
-  // 거래내역은 토스트로 피드백받음
-  void _showToast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
+  DateTime _normalize(DateTime d) => DateTime(d.year, d.month, d.day);
 
-
-  // 캘린더 load
   @override
   void initState() {
     super.initState();
     if (widget.isLoggedIn) {
-      _showChatInsteadOfList = false;
-      _loadTransactions(_selectedDay);
-      _loadWeeklyTransactions(_focusedDay);
+      _loadMonthData(_focusedDay);
     }
+  }
+
+  @override
+  void dispose() {
+    _chatController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Color(0xFF4C7BED),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.account_balance_wallet, size: 28),
-            SizedBox(width: 8),
-            Text(
-              '캐시톡',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'GmarketSans',
-              ),
+      backgroundColor: Colors.grey[50],
+      resizeToAvoidBottomInset: true, // 키보드 올라올 때 화면 조정
+      appBar: CommonAppBar(
+        title: '달력',
+        onStatisticsPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => StatisticsScreen(isLoggedIn: widget.isLoggedIn),
             ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(_showChatInsteadOfList ? Icons.list : Icons.chat),
-            onPressed: () {
-              setState(() {
-                _showChatInsteadOfList = !_showChatInsteadOfList;
-              });
-            },
-          ),
-          Builder(
-            builder: (context) => IconButton(
-              icon: Icon(Icons.menu),
-              onPressed: () {
-                Scaffold.of(context).openEndDrawer();
-              },
-            ),
-          ),
-        ],
-
+          ).then((_) {
+            _loadTransactions(_selectedDay);
+            _loadMonthData(_focusedDay);
+          });
+        },
+        onChatPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => ChatScreen()),
+          ).then((_) {
+            _loadTransactions(_selectedDay);
+            _loadMonthData(_focusedDay);
+          });
+        },
       ),
       endDrawer: MenuDrawer(isLoggedIn: widget.isLoggedIn),
-      body: Column(
-        children: [
-          // 로그인 여부에 따라 다른 화면
-          if (widget.isLoggedIn) ...[
-            _buildCalendar(),
-            const Divider(height: 1),
+      body: widget.isLoggedIn
+          ? _buildLoggedInView()
+          : _buildLoggedOutView(),
+    );
+  }
 
-            Expanded(
-              child: _showChatInsteadOfList
-                  ? ChatMessageList(
-                messages: _messages,
-                isTyping: _isTyping,
-              )
-                  : _buildTransactionList(),
+  Widget _buildLoggedInView() {
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                _buildCalendar(),
+                _buildProgressBar(),
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.3, // 거래내역 최소 높이
+                  child: _buildTransactionList(),
+                ),
+              ],
             ),
-          ]
-          else ...[
-            // 로그인 안했을때
-            LoginBanner(),
-            Expanded(
-              child: ChatMessageList(
-                messages: _messages,
-                isTyping: _isTyping,
-              ),
-            ),
-          ],
-
-          Divider(height: 1),
-
-          // 챗봇 입력창 (공통)
-          ChatInput(
-            controller: _chatController,
-            onSend: _sendMessage,
           ),
-        ],
-      ),
+        ),
+        Divider(height: 1),
+        ChatInput(
+          controller: _chatController,
+          onSend: _handleSendMessage,
+        ),
+      ],
     );
   }
 
   // 캘린더 위젯
   Widget _buildCalendar() {
-    return TableCalendar(
-      firstDay: DateTime.utc(2020, 1, 1),
-      lastDay: DateTime.utc(2030, 12, 31),
-      focusedDay: _focusedDay,
+    return Container(
+      margin: EdgeInsets.fromLTRB(16, 16, 16, 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: TableCalendar(
+          firstDay: DateTime.utc(2020, 1, 1),
+          lastDay: DateTime.utc(2030, 12, 31),
+          focusedDay: _focusedDay,
+          selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+          onDaySelected: (selectedDay, focusedDay) {
+            setState(() {
+              _selectedDay = selectedDay;
+              _focusedDay = focusedDay;
+            });
+            _loadTransactions(selectedDay);
+          },
+          onPageChanged: (focusedDay) {
+            setState(() {
+              _focusedDay = focusedDay;
+            });
+            _loadMonthData(focusedDay);
+          },
+          calendarFormat: CalendarFormat.month,
+          calendarBuilders: CalendarBuilders(
+            markerBuilder: (context, day, events) {
+              final date = _normalize(day);
+              final expense = _dailyExpenseMap[date];
+              final income = _dailyIncomeMap[date];
 
-      selectedDayPredicate: (day) =>
-          isSameDay(_selectedDay, day),
+              if (expense == null && income == null) return null;
 
-      onDaySelected: (selectedDay, focusedDay) {
-        setState(() {
-          _selectedDay = selectedDay;
-          _focusedDay = focusedDay;
-        });
-        _loadTransactions(selectedDay);
-      },
-
-      onPageChanged: (focusedDay) {
-        _focusedDay = focusedDay;
-        _loadWeeklyTransactions(focusedDay);
-      },
-
-      calendarFormat: CalendarFormat.week,
-
-      calendarBuilders: CalendarBuilders(
-        markerBuilder: (context, day, events) {
-          final date = _normalize(day);
-          final expense = _dailyExpenseMap[date];
-          final income = _dailyIncomeMap[date];
-
-          if (expense == null && income == null) return null;
-
-          return Positioned(
-            bottom: 2,
-            child: Column(
-              children: [
-                if (expense != null && expense > 0)
-                  Text(
-                    '-${expense.toInt()}',
-                    style: const TextStyle(
-                      fontSize: 9,
-                      color: Colors.red,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                if (income != null && income > 0)
-                  Text(
-                    '+${income.toInt()}',
-                    style: const TextStyle(
-                      fontSize: 9,
-                      color: Colors.green,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+              return Positioned(
+                bottom: 2,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (income != null && income > 0)
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                        margin: EdgeInsets.only(right: 2),
+                        decoration: BoxDecoration(
+                          color: Color(0xFF00B274).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '+${_formatVeryCompact(income)}',
+                          style: TextStyle(
+                            fontSize: 8,
+                            color: Color(0xFF00B274),
+                            fontWeight: FontWeight.w700,
+                            height: 1.2,
+                          ),
+                        ),
+                      ),
+                    if (expense != null && expense > 0)
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Color(0xFFFE4040).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '-${_formatVeryCompact(expense)}',
+                          style: TextStyle(
+                            fontSize: 8,
+                            color: Color(0xFFFE4040),
+                            fontWeight: FontWeight.w700,
+                            height: 1.2,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+          headerStyle: HeaderStyle(
+            formatButtonVisible: false,
+            titleCentered: true,
+            headerPadding: EdgeInsets.symmetric(vertical: 2),
+            titleTextStyle: TextStyle(
+              fontSize: 19,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+              letterSpacing: 0.3,
+            ),
+            leftChevronIcon: Container(
+              padding: EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Color(0xFF4C7BED).withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.chevron_left,
+                color: Color(0xFF4C7BED),
+                size: 22,
+              ),
+            ),
+            rightChevronIcon: Container(
+              padding: EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Color(0xFF4C7BED).withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.chevron_right,
+                color: Color(0xFF4C7BED),
+                size: 22,
+              ),
+            ),
+          ),
+          daysOfWeekStyle: DaysOfWeekStyle(
+            weekdayStyle: TextStyle(
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
+            ),
+            weekendStyle: TextStyle(
+              color: Color(0xFFFE4040).withOpacity(0.8),
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
+            ),
+          ),
+          calendarStyle: CalendarStyle(
+            cellMargin: EdgeInsets.all(10),
+            cellPadding: EdgeInsets.zero,
+            todayDecoration: BoxDecoration(
+              color: Color(0xFF4C7BED).withOpacity(0.12),
+              shape: BoxShape.circle,
+            ),
+            todayTextStyle: TextStyle(
+              color: Color(0xFF4C7BED),
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
+            ),
+            selectedDecoration: BoxDecoration(
+              color: Color(0xFF4C7BED),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0xFF4C7BED).withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
               ],
             ),
-          );
-        },
-      ),
-
-
-
-      headerStyle: const HeaderStyle(
-        formatButtonVisible: false,
-        titleCentered: true,
-      ),
-
-      calendarStyle: CalendarStyle(
-        todayDecoration: BoxDecoration(
-          color: Colors.blue.withOpacity(0.3),
-          shape: BoxShape.circle,
-        ),
-        selectedDecoration: const BoxDecoration(
-          color: Color(0xFF4C7BED),
-          shape: BoxShape.circle,
+            selectedTextStyle: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
+            ),
+            defaultTextStyle: TextStyle(
+              color: Colors.black87,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+            weekendTextStyle: TextStyle(
+              color: Color(0xFFFE4040).withOpacity(0.7),
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+            outsideDaysVisible: false,
+          ),
         ),
       ),
     );
   }
 
+  Widget _buildProgressBar() {
+    final expensePercent = _monthlyIncome > 0 ? (_monthlyExpense / _monthlyIncome) : 0.0;
 
-  // 거래내역 리스트
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '이번 달 요약',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+              ),
+              Text(
+                '${_focusedDay.year}년 ${_focusedDay.month}월',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '수입',
+                style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+              ),
+              Text(
+                '+${_formatCompact(_monthlyIncome)}',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF00B274),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12),
+          Stack(
+            children: [
+              Container(
+                height: 12,
+                decoration: BoxDecoration(
+                  color: Color(0xFFE3F2FD),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              FractionallySizedBox(
+                widthFactor: expensePercent.clamp(0.0, 1.0),
+                child: Container(
+                  height: 12,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: expensePercent > 0.8
+                          ? [Color(0xFFFE4040), Color(0xFFFF6B6B)]
+                          : [Color(0xFF4C7BED), Color(0xFF6B8FFF)],
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '잔액',
+                style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+              ),
+              Text(
+                '${_monthlyIncome - _monthlyExpense >= 0 ? '+' : ''}${_formatCompact(_monthlyIncome - _monthlyExpense)}',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: _monthlyIncome - _monthlyExpense >= 0
+                      ? Color(0xFF4C7BED)
+                      : Color(0xFFFE4040),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatCompact(double amount) {
+    if (amount >= 100000000) {
+      return '${(amount / 100000000).toStringAsFixed(1)}억';
+    }
+    if (amount >= 10000) {
+      return '${(amount / 10000).toStringAsFixed(0)}만';
+    }
+    return amount.toStringAsFixed(0);
+  }
+
+  String _formatVeryCompact(double amount) {
+    final int intAmount = amount.toInt();
+    if (intAmount >= 10000) {
+      return '${(intAmount / 10000).toStringAsFixed(0)}만';
+    }
+    if (intAmount >= 1000) {
+      // 천 단위 쉼표 추가
+      return intAmount.toString().replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+            (Match m) => '${m[1]},',
+      );
+    }
+    return intAmount.toString();
+  }
+
+  void _handleSendMessage() async {
+    final message = _chatController.text.trim();
+    if (message.isEmpty) return;
+
+    _chatController.clear();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+            SizedBox(width: 12),
+            Text('처리 중이에요...'),
+          ],
+        ),
+        duration: Duration(days: 1),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    try {
+      final response = await _chatService.sendMessage(message);
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final reply = data['reply'] ?? '처리되었습니다';
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Color(0xFF213864),
+            duration: Duration(seconds: 10),
+            behavior: SnackBarBehavior.floating,
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(reply, style: TextStyle(color: Colors.white)),
+                SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    },
+                    child: Text('확인', style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+
+        await Future.delayed(Duration(milliseconds: 500));
+        _loadTransactions(_selectedDay);
+        _loadMonthData(_focusedDay);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                SizedBox(width: 12),
+                Text('처리에 실패했어요'),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.wifi_off, color: Colors.white),
+              SizedBox(width: 12),
+              Text('네트워크 오류가 발생했습니다'),
+            ],
+          ),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      print('챗봇 에러: $e');
+    }
+  }
+
+  Widget _buildLoggedOutView() {
+    return Column(
+      children: [
+        LoginBanner(),
+        Expanded(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.lock_outline, size: 80, color: Colors.grey[300]),
+                SizedBox(height: 16),
+                Text(
+                  '로그인이 필요합니다',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  '로그인 후 거래내역과 챗봇을 사용해보세요',
+                  style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTransactionList() {
     if (_transactions.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.receipt_long, size: 64, color: Colors.grey[300]),
-            const SizedBox(height: 16),
+            Icon(Icons.receipt_long, size: 28, color: Colors.grey[300]),
+            SizedBox(height: 16),
             Text(
               '${_selectedDay.month}월 ${_selectedDay.day}일\n거래내역이 없습니다',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: Colors.grey[600], fontSize: 15),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 12),
             Text(
-              '챗봇에게 "점심값 8000원"이라고\n말해보세요!',
+              '아래 입력창에서\n"점심값 8000원"이라고 말해보세요!',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color(0xFF3498DB),
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Color(0xFF4C7BED), fontSize: 14),
             ),
           ],
         ),
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _transactions.length,
-      itemBuilder: (context, index) {
-        final transaction = _transactions[index];
-        return _buildTransactionItem(transaction);
-      },
+    return Container(
+      color: Colors.grey[50],
+      child: ListView.builder(
+        padding: EdgeInsets.only(
+          top: 20,
+          left: 16,
+          right: 16,
+          bottom: 120,
+        ),
+        itemCount: _transactions.length,
+        itemBuilder: (context, index) {
+          return _buildTransactionItem(_transactions[index]);
+        },
+      ),
     );
   }
 
-  // 거래내역 개별 아이템
   Widget _buildTransactionItem(Transaction transaction) {
-    final isIncome = transaction.type == 'income';
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+    final isIncome = transaction.type.toLowerCase() == 'income';
+    return Container(
+      margin: EdgeInsets.only(bottom: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: isIncome ? Colors.green[100] : Colors.red[50],
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: isIncome
+                ? Color(0xFF00B274).withOpacity(0.1)
+                : Color(0xFFFE4040).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Icon(
-            isIncome ? Icons.arrow_upward : Icons.payment_sharp,
-            color: isIncome ? const Color(0xFF3C76F1) : const Color(0xFFFB5D76),
+            isIncome ? Icons.arrow_upward : Icons.wallet,
+            color: isIncome ? Color(0xFF00B274) : Color(0xFFFE4040),
+            size: 22,
           ),
         ),
-        title: Text(transaction.category),
-        subtitle: Text(transaction.memo,
-          style: TextStyle(
-            fontFamily: 'Pretendard',
-          )),
-        trailing: Text(
-          '${isIncome ? '+' : '-'}${transaction.amount.toStringAsFixed(0)}원',
+        title: Text(
+          transaction.category,
           style: TextStyle(
             fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: isIncome ? const Color(0xFF3C76F1) :  const Color(0xFFFB5D76),
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        subtitle: transaction.memo.isNotEmpty
+            ? Padding(
+          padding: EdgeInsets.only(top: 4),
+          child: Text(
+            transaction.memo,
+            style: TextStyle(
+              fontFamily: 'Pretendard',
+              fontSize: 13,
+              color: Colors.grey[600],
+            ),
+          ),
+        )
+            : null,
+        trailing: Text(
+          '${isIncome ? '+' : '-'}${transaction.amount.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}원',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            fontFamily: 'Pretendard',
+            color: isIncome ? Color(0xFF00B274) : Color(0xFFFE4040),
           ),
         ),
       ),
     );
   }
 
-  // 메시지 전송
-  void _sendMessage() async {
-    if (_chatController.text.trim().isEmpty) return;
-
-    final userMessage = _chatController.text;
-    _chatController.clear();
-
-    // 로그인 전만 사용자 메시지 보여줌
-    if (!widget.isLoggedIn) {
-      setState(() {
-        _messages.add(ChatMessage(text: userMessage, isUser: true));
-        _isTyping = true;
-      });
-    } else {
-      setState(() {
-        _isTyping = true;
-      });
-    }
-
-    try {
-      final response = await _chatService.sendMessage(userMessage);
-      if (!mounted) return;
-
-      final data = jsonDecode(response.body);
-      final reply = data['reply'] ?? '처리되었습니다';
-
-      setState(() {
-        _isTyping = false;
-      });
-
-      if (response.statusCode == 200) {
-        if (widget.isLoggedIn) {
-          //  로그인 후: 토스트 + UI 갱신
-          _showToast(reply);
-          _loadTransactions(_selectedDay);
-          _loadWeeklyTransactions(_focusedDay);
-        } else {
-          //  로그인 전: 챗봇 말풍선
-          setState(() {
-            _messages.add(ChatMessage(
-              text: reply,
-              isUser: false,
-            ));
-          });
-        }
-      } else {
-        _showToast('처리에 실패했어요');
-      }
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        _isTyping = false;
-      });
-
-      _showToast('네트워크 오류가 발생했습니다');
-      print('채팅 에러: $e');
-    }
-  }
-
-      // void _loadMonthlyTransactions(DateTime month) async {
-  //   final mid = await _authService.getMid();
-  //   if (mid == null) return;
-  //
-  //   final response = await _transactionService.getListByDay(
-  //     mid: mid,
-  //     year: month.year,
-  //     month: month.month,
-  //   );
-  //
-  //   if (response.statusCode == 200) {
-  //     final body = jsonDecode(response.body);
-  //     final List list = body['dtoList'] ?? [];
-  //
-  //     final Map<DateTime, double> expenseMap = {};
-  //     final Map<DateTime, double> incomeMap = {};
-  //
-  //     for (final e in list) {
-  //       final date = _normalize(DateTime.parse(e['date']));
-  //       final amount = (e['amount'] as num).toDouble();
-  //       final type = e['type'].toString().toUpperCase();
-  //
-  //       if (type == 'EXPENSE') {
-  //         expenseMap[date] = (expenseMap[date] ?? 0) + amount;
-  //       } else if (type == 'INCOME') {
-  //         incomeMap[date] = (incomeMap[date] ?? 0) + amount;
-  //       }
-  //     }
-  //
-  //     setState(() {
-  //       _dailyExpenseMap = expenseMap;
-  //       _dailyIncomeMap = incomeMap;
-  //     });
-  //   }
-  // }
-
-
-  // 주간 데이터 로딩
-  void _loadWeeklyTransactions(DateTime focusedDay) async {
+  void _loadMonthData(DateTime focusedDay) async {
     final mid = await _authService.getMid();
     if (mid == null) return;
 
-    final startOfWeek =
-    focusedDay.subtract(Duration(days: focusedDay.weekday % 7));
+    final year = focusedDay.year;
+    final month = focusedDay.month;
+    final monthStr = '${year}-${month.toString().padLeft(2, '0')}';
 
     final Map<DateTime, double> expenseMap = {};
     final Map<DateTime, double> incomeMap = {};
+    double totalIncome = 0;
+    double totalExpense = 0;
 
-    for (int i = 0; i < 7; i++) {
-      final day = startOfWeek.add(Duration(days: i));
-      final dateKey = _normalize(day);
-
-      final dateStr =
-          '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
-
-      final response = await _transactionService.getListByDay(
+    try {
+      final response = await _transactionService.getListByMonth(
         mid: mid,
-        date: dateStr,
+        month: monthStr,
         page: 1,
-        size: 100,
+        size: 1000,
       );
 
       if (response.statusCode == 200) {
@@ -426,24 +697,33 @@ class _HomeScreenState extends State<HomeScreen> {
         for (final e in list) {
           final amount = (e['amount'] as num).toDouble();
           final type = e['type'].toString().toUpperCase();
+          final dateStr = e['date'] as String;
+          final date = DateTime.parse(dateStr);
+          final dateKey = _normalize(date);
 
           if (type == 'EXPENSE') {
             expenseMap[dateKey] = (expenseMap[dateKey] ?? 0) + amount;
+            totalExpense += amount;
           } else if (type == 'INCOME') {
             incomeMap[dateKey] = (incomeMap[dateKey] ?? 0) + amount;
+            totalIncome += amount;
           }
         }
       }
+    } catch (e) {
+      print('월간 데이터 로드 실패: $e');
     }
 
     setState(() {
       _dailyExpenseMap = expenseMap;
       _dailyIncomeMap = incomeMap;
+      _monthlyIncome = totalIncome;
+      _monthlyExpense = totalExpense;
     });
+
+    _loadTransactions(_selectedDay);
   }
 
-
-  // 거래내역 로드 (API 호출)
   void _loadTransactions(DateTime date) async {
     final dateStr =
         '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
@@ -452,7 +732,6 @@ class _HomeScreenState extends State<HomeScreen> {
       final mid = await _authService.getMid();
 
       if (mid == null) {
-        print('mid 없음 - 로그인 필요');
         setState(() {
           _transactions = [];
         });
@@ -474,7 +753,7 @@ class _HomeScreenState extends State<HomeScreen> {
           return Transaction(
             id: e['id'].toString(),
             date: DateTime.parse(e['date']),
-            type: e['type'], // INCOME / EXPENSE
+            type: e['type'],
             amount: (e['amount'] as num).toDouble(),
             category: e['category'] ?? '기타',
             memo: e['memo'] ?? '',
@@ -496,15 +775,8 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     }
   }
-
-  @override
-  void dispose() {
-    _chatController.dispose();
-    super.dispose();
-  }
 }
 
-// 거래 데이터 모델
 class Transaction {
   final String id;
   final DateTime date;

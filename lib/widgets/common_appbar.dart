@@ -2,35 +2,46 @@ import 'package:flutter/material.dart';
 
 class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
-  final List<Widget>? actions;
+  final VoidCallback? onStatisticsPressed;
+  final VoidCallback? onChatPressed;
   final bool showBackButton;
 
   const CommonAppBar({
     super.key,
     required this.title,
-    this.actions,
+    this.onStatisticsPressed,
+    this.onChatPressed,
     this.showBackButton = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: Color(0xFF3498DB),
+      flexibleSpace: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF157AFF), Color(0xFF1557FF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+      ),
       foregroundColor: Colors.white,
       elevation: 0,
       centerTitle: true,
-      automaticallyImplyLeading: showBackButton,
+      leading: showBackButton
+          ? const BackButton()
+          : IconButton(
+        icon: const Icon(Icons.bar_chart),
+        onPressed: onStatisticsPressed,
+      ),
       title: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.account_balance_wallet,
-            size: 28,
-          ),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           Text(
             title,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
               fontFamily: 'GmarketSans',
@@ -38,10 +49,16 @@ class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
         ],
       ),
-      actions: actions,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.chat),
+          onPressed: onChatPressed,
+        ),
+      ],
     );
   }
 
+
   @override
-  Size get preferredSize => Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }

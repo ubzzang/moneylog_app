@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:moneylog_app/screens/login_screen.dart';
 import 'screens/home_screen.dart';
 
 void main() {
@@ -17,7 +18,7 @@ class MyApp extends StatelessWidget {
         primaryColor: Color(0xFF3498DB),
       ),
       //home: const HomeScreen(isLoggedIn: false),
-      home: const HomeScreen(),
+      home: const LoginScreen(),
     );
   }
 }

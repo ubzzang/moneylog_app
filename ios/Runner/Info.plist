@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+    <string>음성으로 지출을 입력하기 위해 마이크 권한이 필요합니다</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>음성인식을 위해 권한이 필요합니다</string>
 </dict>
 </plist>

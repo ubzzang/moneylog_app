@@ -3,181 +3,150 @@ import '../models/chat_message.dart';
 
 class ChatMessageList extends StatelessWidget {
   final List<ChatMessage> messages;
-  final bool isTyping;  // 추가!
+  final bool isTyping;
+  final ScrollController scrollController;
 
   const ChatMessageList({
     super.key,
     required this.messages,
-    this.isTyping = false,  // 추가!
+    required this.isTyping,
+    required this.scrollController,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (messages.isEmpty) {
-      return _buildEmptyState();
-    }
-
     return ListView.builder(
+      controller: scrollController,
       padding: EdgeInsets.all(16),
-      itemCount: messages.length + (isTyping ? 1 : 0),  // 타이핑 중이면 +1
+      itemCount: messages.length + (isTyping ? 1 : 0),
       itemBuilder: (context, index) {
+        // 타이핑 인디케이터
         if (index == messages.length && isTyping) {
           return _buildTypingIndicator();
         }
-        return _buildMessageItem(messages[index]);
+
+        final message = messages[index];
+        return _buildMessageBubble(message);
       },
     );
   }
 
-  // 타이핑 인디케이터
-  Widget _buildTypingIndicator() {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            backgroundColor: Color(0xFF3498DB),
-            radius: 18,
-            child: Icon(
-              Icons.smart_toy,
-              size: 20,
-              color: Colors.white,
-            ),
+  // 메시지 말풍선
+  Widget _buildMessageBubble(ChatMessage message) {
+    return Align(
+      alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: EdgeInsets.only(bottom: 12),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        constraints: BoxConstraints(maxWidth: 280),
+        decoration: BoxDecoration(
+          color: message.isUser ? Color(0xFF3498DB) : Colors.grey[200],
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          message.text,
+          style: TextStyle(
+            color: message.isUser ? Colors.white : Colors.black87,
+            fontSize: 15,
           ),
-          SizedBox(width: 8),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildDot(0),
-                SizedBox(width: 4),
-                _buildDot(1),
-                SizedBox(width: 4),
-                _buildDot(2),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  // 타이핑 점
-  Widget _buildDot(int index) {
-    return TweenAnimationBuilder(
-      tween: Tween<double>(begin: 0.0, end: 1.0),
-      duration: Duration(milliseconds: 600),
-      builder: (context, double value, child) {
-        return Opacity(
-          opacity: (value * 2 - index * 0.3).clamp(0.3, 1.0),
-          child: Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: Colors.grey[600],
-              shape: BoxShape.circle,
-            ),
+  // 타이핑 인디케이터 (점점점 애니메이션)
+  Widget _buildTypingIndicator() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: EdgeInsets.only(bottom: 12),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: TypingIndicator(),
+      ),
+    );
+  }
+}
+
+// 점점점 애니메이션 위젯
+class TypingIndicator extends StatefulWidget {
+  const TypingIndicator({super.key});
+
+  @override
+  State<TypingIndicator> createState() => _TypingIndicatorState();
+}
+
+class _TypingIndicatorState extends State<TypingIndicator>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation1;
+  late Animation<double> _animation2;
+  late Animation<double> _animation3;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: Duration(milliseconds: 1400),
+      vsync: this,
+    )..repeat();
+
+    _animation1 = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 0.0), weight: 2),
+    ]).animate(_controller);
+
+    _animation2 = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 0.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 0.0), weight: 1),
+    ]).animate(_controller);
+
+    _animation3 = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 0.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 1),
+    ]).animate(_controller);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildDot(_animation1),
+        SizedBox(width: 4),
+        _buildDot(_animation2),
+        SizedBox(width: 4),
+        _buildDot(_animation3),
+      ],
+    );
+  }
+
+  Widget _buildDot(Animation<double> animation) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        return Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.grey[600]!.withOpacity(0.3 + (animation.value * 0.7)),
           ),
         );
       },
-    );
-  }
-
-  // 비어있을 때
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.chat_bubble_outline,
-            size: 80,
-            color: Colors.grey[300],
-          ),
-          SizedBox(height: 16),
-          Text(
-            'AI와 대화를 시작해보세요',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 8),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 40),
-            child: Text(
-              '예: "오늘 점심값 8000원 썼어"\n"이번 달 지출 알려줘"',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 메시지 아이템
-  Widget _buildMessageItem(ChatMessage message) {
-    final isUser = message.isUser;
-    return Padding(
-      padding: EdgeInsets.only(bottom: 12),
-      child: Row(
-        mainAxisAlignment:
-        isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!isUser) ...[
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: Colors.transparent,
-              child: Image.asset(
-                'assets/images/cat.png',
-                fit: BoxFit.contain,
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: isUser ? Color(0xFF3498DB) : Colors.grey[200],
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                message.text,
-                style: TextStyle(
-                  color: isUser ? Colors.white : Colors.black87,
-                  fontSize: 15,
-                ),
-              ),
-            ),
-          ),
-          if (isUser) ...[
-            SizedBox(width: 8),
-            CircleAvatar(
-              backgroundColor: Colors.grey[300],
-              radius: 18,
-              child: Icon(
-                Icons.person,
-                size: 20,
-                color: Colors.grey[700],
-              ),
-            ),
-          ],
-        ],
-      ),
     );
   }
 }

@@ -13,8 +13,10 @@ dependencies:
   cupertino_icons: ^1.0.8
   table_calendar: ^3.0.9
   http: ^1.1.0
-  shared_preferences: ^2.2.2 # 토큰 저장용
-  flutter_svg: ^2.0.10 # svg
+  shared_preferences: ^2.2.2
+  flutter_svg: ^2.0.10
+  speech_to_text: ^7.3.0
+  fl_chart: ^0.68.0
 
 dev_dependencies:
   flutter_test:
@@ -25,7 +27,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
-  # 폰트 설정
   fonts:
     - family: GmarketSans
       fonts:
