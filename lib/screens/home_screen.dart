@@ -156,42 +156,42 @@ class _HomeScreenState extends State<HomeScreen> {
               if (expense == null && income == null) return null;
 
               return Positioned(
-                bottom: 2,
-                child: Row(
+                bottom: 1,
+                child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (income != null && income > 0)
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-                        margin: EdgeInsets.only(right: 2),
+                        padding: EdgeInsets.symmetric(horizontal: 2, vertical: 0.5),
+                        margin: EdgeInsets.only(bottom: 1),
                         decoration: BoxDecoration(
                           color: Color(0xFF00B274).withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
                           '+${_formatVeryCompact(income)}',
                           style: TextStyle(
-                            fontSize: 8,
+                            fontSize: 7,
                             color: Color(0xFF00B274),
                             fontWeight: FontWeight.w700,
-                            height: 1.2,
+                            height: 1.0,
                           ),
                         ),
                       ),
                     if (expense != null && expense > 0)
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                        padding: EdgeInsets.symmetric(horizontal: 2, vertical: 0.5),
                         decoration: BoxDecoration(
                           color: Color(0xFFFE4040).withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
                           '-${_formatVeryCompact(expense)}',
                           style: TextStyle(
-                            fontSize: 8,
+                            fontSize: 7,
                             color: Color(0xFFFE4040),
                             fontWeight: FontWeight.w700,
-                            height: 1.2,
+                            height: 1.0,
                           ),
                         ),
                       ),
@@ -318,7 +318,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 '이번 달 요약',
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: 11,
                   fontWeight: FontWeight.w500,
                   color: Colors.black87,
                 ),
@@ -326,7 +326,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 '${_focusedDay.year}년 ${_focusedDay.month}월',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 11,
                   color: Colors.grey[600],
                   fontWeight: FontWeight.w500,
                 ),
@@ -339,14 +339,32 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Text(
                 '수입',
-                style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                style: TextStyle(fontSize: 12, color: Colors.grey[700]),
               ),
               Text(
                 '+${_formatCompact(_monthlyIncome)}',
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF00B274),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '지출',
+                style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+              ),
+              Text(
+                '-${_formatCompact(_monthlyExpense)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFFE4040),
                 ),
               ),
             ],
@@ -383,12 +401,12 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Text(
                 '잔액',
-                style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                style: TextStyle(fontSize: 12, color: Colors.grey[700]),
               ),
               Text(
                 '${_monthlyIncome - _monthlyExpense >= 0 ? '+' : ''}${_formatCompact(_monthlyIncome - _monthlyExpense)}',
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: _monthlyIncome - _monthlyExpense >= 0
                       ? Color(0xFF4C7BED)
@@ -403,28 +421,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _formatCompact(double amount) {
-    if (amount >= 100000000) {
-      return '${(amount / 100000000).toStringAsFixed(1)}억';
-    }
-    if (amount >= 10000) {
-      return '${(amount / 10000).toStringAsFixed(0)}만';
-    }
-    return amount.toStringAsFixed(0);
+    final int intAmount = amount.toInt();
+    // 쉼표 추가
+    return intAmount.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]},',
+    );
   }
 
   String _formatVeryCompact(double amount) {
     final int intAmount = amount.toInt();
-    if (intAmount >= 10000) {
-      return '${(intAmount / 10000).toStringAsFixed(0)}만';
-    }
-    if (intAmount >= 1000) {
-      // 천 단위 쉼표 추가
-      return intAmount.toString().replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-            (Match m) => '${m[1]},',
-      );
-    }
-    return intAmount.toString();
+    // 쉼표 추가
+    return intAmount.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]},',
+    );
   }
 
   void _handleSendMessage() async {
@@ -593,7 +604,7 @@ class _HomeScreenState extends State<HomeScreen> {
           top: 20,
           left: 16,
           right: 16,
-          bottom: 120,
+          bottom: 150,
         ),
         itemCount: _transactions.length,
         itemBuilder: (context, index) {
