@@ -10,6 +10,8 @@ import 'package:table_calendar/table_calendar.dart';
 import 'dart:convert';
 import '../widgets/login_banner.dart';
 import '../widgets/menu_drawer.dart';
+import 'package:moneylog_app/screens/register_screen.dart';
+
 
 class HomeScreen extends StatefulWidget {
   final bool isLoggedIn;
@@ -57,17 +59,38 @@ class _HomeScreenState extends State<HomeScreen> {
       resizeToAvoidBottomInset: true, // 키보드 올라올 때 화면 조정
       appBar: CommonAppBar(
         title: '달력',
+
         onStatisticsPressed: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => StatisticsScreen(isLoggedIn: widget.isLoggedIn),
+              builder: (context) =>
+                  StatisticsScreen(isLoggedIn: widget.isLoggedIn),
             ),
           ).then((_) {
             _loadTransactions(_selectedDay);
             _loadMonthData(_focusedDay);
           });
         },
+
+        // ✅ 영랑추가
+        onAddPressed: () async {
+          final mid = await _authService.getMid();
+          if (mid == null) return;
+
+          final changed = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (_) => TransactionFormPage(mid: mid),
+            ),
+          );
+
+          if (changed == true) {
+            _loadTransactions(_selectedDay);
+            _loadMonthData(_focusedDay);
+          }
+        },
+
         onChatPressed: () {
           Navigator.push(
             context,

@@ -6,6 +6,22 @@ import '../common/constants.dart';
 class TransactionService {
   static const String BASE_URL = '${Constants.BASE_API_URL}/api/transactions';
 
+  // 영랑추가 수입지출 등록
+  Future<http.Response> register(Map<String, dynamic> transaction) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    final uri = Uri.parse(BASE_URL);
+
+    return http.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(transaction),
+    );
+  }
 
   // 월간 수입 / 소비
   Future<http.Response> getListByMonth({

@@ -10,6 +10,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+#  영랑추가
+  flutter_localizations:
+    sdk: flutter
+#    추가종료
   cupertino_icons: ^1.0.8
   table_calendar: ^3.0.9
   http: ^1.1.0
