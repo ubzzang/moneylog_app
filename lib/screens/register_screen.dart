@@ -197,23 +197,38 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
               ),
               const SizedBox(height: 14),
 
-              // 카테고리 드롭다운
+// 카테고리 드롭다운
               _LabeledRow(
                 label: '카테고리',
-                child: DropdownButtonFormField<String>(
-                  value: _category,
-                  items: _currentCategories
-                      .map((c) => DropdownMenuItem(
-                    value: c,
-                    child: Text(c, style: const TextStyle(fontFamily: 'Pretendard')), // (6번)
-                  ))
-                      .toList(),
-                  onChanged: (v) => setState(() => _category = v),
-                  decoration: _inputDecoration(hintText: '카테고리 선택'), // (4번)
-                  style: const TextStyle(fontFamily: 'Pretendard', color: _darkText), // (6번)
+                child: Theme(
+                  data: Theme.of(context).copyWith(
+                    canvasColor: Colors.white, // 펼친 메뉴 배경 흰색
+                  ),
+                  child: DropdownButtonFormField<String>(
+                    isExpanded: true, // 메뉴 폭 = 버튼 폭
+                    value: _category,
+                    items: _currentCategories
+                        .map(
+                          (c) => DropdownMenuItem<String>(
+                        value: c,
+                        child: Text(
+                          c,
+                          style: const TextStyle(fontFamily: 'Pretendard'),
+                        ),
+                      ),
+                    )
+                        .toList(),
+                    onChanged: (v) => setState(() => _category = v),
+                    decoration: _inputDecoration(hintText: '카테고리 선택'),
+                    style: const TextStyle(
+                      fontFamily: 'Pretendard',
+                      color: _darkText,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 14),
+
 
               // 금액
               _LabeledRow(

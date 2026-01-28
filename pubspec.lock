@@ -126,13 +126,11 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.0.0"
-<<<<<<< HEAD
   flutter_localizations:
     dependency: "direct main"
     description: flutter
     source: sdk
     version: "0.0.0"
-=======
   flutter_sound:
     dependency: "direct main"
     description:
@@ -157,7 +155,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "9.30.0"
->>>>>>> 13978b97adc6ef9b8b8adf8249ba8f89102cf9fd
   flutter_svg:
     dependency: "direct main"
     description:
