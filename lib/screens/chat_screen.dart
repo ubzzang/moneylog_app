@@ -6,6 +6,7 @@ import 'dart:convert';
 import '../models/chat_message.dart';
 import '../widgets/chat_input.dart';
 import '../services/chat_service.dart';
+import '../services/voice_ws_service.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -18,6 +19,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _chatController = TextEditingController();
   final ChatService _chatService = ChatService();
   final ScrollController _scrollController = ScrollController();
+  final VoiceWsService _voice = VoiceWsService();
 
   final List<ChatMessage> _messages = [
     ChatMessage(
@@ -36,6 +38,63 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
+
+  @override
+  void initState() {
+    super.initState();
+
+    _voice.onError = (e) {
+      if (!mounted) return;
+      _showToast(e);
+    };
+
+    _voice.onEvent = (evt) {
+      if (!mounted) return;
+      final type = (evt['type'] ?? '').toString();
+
+      // 서버 STT 결과(유저 메시지로 표시)
+      if (type == 'stt_final') {
+        final text = (evt['text'] ?? '').toString().trim();
+        if (text.isNotEmpty) {
+          setState(() {
+            _messages.add(ChatMessage(text: text, isUser: true));
+            _isTyping = true; // 이후 llm 처리 중일 가능성
+          });
+          // 답변 후 스크롤
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scrollController.hasClients) {
+              _scrollController.animateTo(
+                _scrollController.position.maxScrollExtent,
+                duration: Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              );
+            }
+          });
+        }
+      }
+
+      // 서버 LLM 최종 응답(봇 메시지로 표시)
+      if (type == 'llm_final') {
+        final reply = (evt['reply'] ?? '').toString();
+        setState(() {
+          _messages.add(ChatMessage(text: reply, isUser: false));
+          _isTyping = false;
+        });
+        // 답변 후 스크롤
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      }
+      // 선택: llm_partial/status 등을 받으면 _isTyping=true로 표시 가능
+    };
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +118,12 @@ class _ChatScreenState extends State<ChatScreen> {
           ChatInput(
             controller: _chatController,
             onSend: _sendMessage,
+            onMicStart: () async {
+              await _voice.startCapture();   // 토글 ON: 계속 캡처/전송
+            },
+            onMicStop: () async {
+              await _voice.stopCapture();    // 토글 OFF: 캡처 중단 + audio_end
+            },
           ),
         ],
       ),
@@ -133,6 +198,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    _voice.dispose();
     _chatController.dispose();
     _scrollController.dispose();
     super.dispose();
