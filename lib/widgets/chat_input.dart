@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
+// import 'package:speech_to_text/speech_to_text.dart' as stt;
+
 
 class ChatInput extends StatefulWidget {
   final TextEditingController controller;
   final VoidCallback onSend;
 
+  // 음성 토글용 콜백
+  final Future<void> Function()? onMicStart;
+  final Future<void> Function()? onMicStop;
+
   const ChatInput({
     super.key,
     required this.controller,
     required this.onSend,
+    this.onMicStart,
+    this.onMicStop,
   });
 
   @override
@@ -16,64 +23,24 @@ class ChatInput extends StatefulWidget {
 }
 
 class _ChatInputState extends State<ChatInput> {
-  late stt.SpeechToText _speech;
   bool _isListening = false;
-  bool _isAvailable = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _speech = stt.SpeechToText();
-    _initSpeech();
-  }
+  Future<void> _toggleListening() async {
+    // 콜백이 없으면 아무 것도 하지 않음(안전)
+    if (widget.onMicStart == null || widget.onMicStop == null) return;
 
-  void _initSpeech() async {
-    _isAvailable = await _speech.initialize(
-      onStatus: (status) {
-        if (status == 'done' || status == 'notListening') {
-          setState(() {
-            _isListening = false;
-          });
-        }
-      },
-      onError: (error) {
-        setState(() {
-          _isListening = false;
-        });
-      },
-    );
-    setState(() {});
-  }
-
-  void _toggleListening() async {
-    if (!_isAvailable) {
+    try {
+      if (_isListening) {
+        await widget.onMicStop!();
+        setState(() => _isListening = false);
+      } else {
+        await widget.onMicStart!();
+        setState(() => _isListening = true);
+      }
+    } catch (_) {
+      setState(() => _isListening = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('음성인식을 사용할 수 없습니다'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    if (_isListening) {
-      await _speech.stop();
-      setState(() {
-        _isListening = false;
-      });
-    } else {
-      setState(() {
-        _isListening = true;
-      });
-
-      await _speech.listen(
-        onResult: (result) {
-          setState(() {
-            widget.controller.text = result.recognizedWords;
-          });
-        },
-        localeId: 'ko_KR',
-        listenMode: stt.ListenMode.confirmation,
+        const SnackBar(content: Text('음성 기능 시작/종료에 실패했습니다')),
       );
     }
   }
@@ -158,7 +125,6 @@ class _ChatInputState extends State<ChatInput> {
 
   @override
   void dispose() {
-    _speech.stop();
     super.dispose();
   }
 }

@@ -19,8 +19,12 @@ dependencies:
   http: ^1.1.0
   shared_preferences: ^2.2.2
   flutter_svg: ^2.0.10
-  speech_to_text: ^7.3.0
+#  speech_to_text: ^7.3.0   ---> 기기 STT를 제거한다.
   fl_chart: ^0.68.0
+# PCM 캡처/재생 + WS용 패키지
+  web_socket_channel: ^3.0.1
+  flutter_sound: ^9.15.54
+  permission_handler: ^11.4.0
 
 dev_dependencies:
   flutter_test:
