@@ -26,18 +26,32 @@ class _ChatInputState extends State<ChatInput> {
   bool _isListening = false;
 
   Future<void> _toggleListening() async {
-    // 콜백이 없으면 아무 것도 하지 않음(안전)
+    debugPrint('[UI] onMicStart=${widget.onMicStart != null}, onMicStop=${widget.onMicStop != null}');
+    debugPrint('[UI] before setState, next=${!_isListening}');
+
+
     if (widget.onMicStart == null || widget.onMicStop == null) return;
 
+    final next = !_isListening;
+
+    // ✅ 1) UI를 먼저 토글 (즉시 변화)
+    setState(() => _isListening = next);
+
+    // ✅ 2) 실제 start/stop은 await 없이 실행(멈춰도 UI는 반응)
     try {
-      if (_isListening) {
-        await widget.onMicStop!();
-        setState(() => _isListening = false);
+      if (next) {
+        widget.onMicStart!().catchError((e, st) {
+          debugPrint('[UI] onMicStart failed: $e');
+          if (mounted) setState(() => _isListening = false);
+        });
       } else {
-        await widget.onMicStart!();
-        setState(() => _isListening = true);
+        widget.onMicStop!().catchError((e, st) {
+          debugPrint('[UI] onMicStop failed: $e');
+          if (mounted) setState(() => _isListening = true);
+        });
       }
     } catch (_) {
+      // 동기 예외만 여기로 옴(대부분 async 예외는 여기로 안 옴)
       setState(() => _isListening = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('음성 기능 시작/종료에 실패했습니다')),

@@ -37,6 +37,9 @@ class VoiceWsService {
   bool _connected = false;
   bool _isCapturing = false;
 
+  // rebuffer: 50ms(1600 bytes) 고정 프레임 전송을 위한 잔여 버퍼
+  Uint8List _pending = Uint8List(0);
+
   // 외부(UI)에 이벤트 전달
   void Function(Map<String, dynamic> event)? onEvent;
   void Function(String err)? onError;
@@ -131,6 +134,8 @@ class VoiceWsService {
     await connectIfNeeded();
     if (_isCapturing) return;
 
+    _pending = Uint8List(0); // 시작할 때 잔여 버퍼 초기화
+
     _recorderBytesCtrl = StreamController<Uint8List>();
     _recorderBytesSub = _recorderBytesCtrl!.stream.listen((bytes) {
       if (bytes.isEmpty) return;
@@ -157,6 +162,7 @@ class VoiceWsService {
 
     try {
       await _recorder.stopRecorder();
+      _flushPendingPadToFrame(); // 말끝 자투리(잔여)를 버리지 않고 0-padding으로 1프레임(1600) 만들어 flush
     } catch (_) {}
 
     // 서버에게 "입력 중단/발화 종료 힌트"
@@ -173,19 +179,40 @@ class VoiceWsService {
 
   void _sendRechunked(Uint8List pcm) {
     if (!_connected || _channel == null) return;
+    if (pcm.isEmpty) return;
 
-    // flutter_sound가 내는 chunk 크기는 가변일 수 있어 50ms(1600 bytes) 단위로 쪼개 전송
+    // 1) pending + new bytes 결합
+    final combined = Uint8List(_pending.length + pcm.length);
+    if (_pending.isNotEmpty) combined.setAll(0, _pending);
+    combined.setAll(_pending.length, pcm);
+
+    // 2) 1600 bytes(50ms) 단위로만 전송
     int off = 0;
-    while (off < pcm.length) {
-      final end = (off + frameBytes50ms <= pcm.length) ? off + frameBytes50ms : pcm.length;
-      final chunk = pcm.sublist(off, end);
+    final int total = combined.length;
 
-      // NOTE: 마지막 chunk가 너무 작으면 서버 프레임 검증에서 drop될 수 있음.
-      // 간이 구현에서는 그대로 전송(관측 후 필요 시 "잔여 버퍼 누적"으로 개선)
+    while (off + frameBytes50ms <= total) {
+      final chunk = combined.sublist(off, off + frameBytes50ms);
       _channel!.sink.add(chunk);
-
-      off = end;
+      off += frameBytes50ms;
     }
+
+    // 3) 남은 잔여는 다음 입력과 합치기 위해 보관
+    _pending = (off < total) ? combined.sublist(off) : Uint8List(0);
+  }
+
+  void _flushPendingPadToFrame() {
+    if (!_connected || _channel == null) {
+      _pending = Uint8List(0);
+      return;
+    }
+    if (_pending.isEmpty) return;
+
+    // 잔여를 0-padding 해서 정확히 1600 bytes로 만들고 1번 전송
+    final padded = Uint8List(frameBytes50ms);
+    padded.setAll(0, _pending); // 나머지는 자동 0
+    _channel!.sink.add(padded);
+
+    _pending = Uint8List(0);
   }
 
   Future<void> dispose() async {

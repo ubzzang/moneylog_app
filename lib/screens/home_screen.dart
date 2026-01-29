@@ -11,6 +11,7 @@ import 'dart:convert';
 import '../widgets/login_banner.dart';
 import '../widgets/menu_drawer.dart';
 import 'package:moneylog_app/screens/register_screen.dart';
+import 'package:moneylog_app/services/voice_ws_service.dart';
 
 
 class HomeScreen extends StatefulWidget {
@@ -25,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final AuthService _authService = AuthService();
   final ChatService _chatService = ChatService();
   final TextEditingController _chatController = TextEditingController();
+  final VoiceWsService _voice = VoiceWsService();
 
   DateTime _selectedDay = DateTime.now();
   DateTime _focusedDay = DateTime.now();
@@ -49,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _chatController.dispose();
+    _voice.dispose();
     super.dispose();
   }
 
@@ -129,6 +132,13 @@ class _HomeScreenState extends State<HomeScreen> {
         ChatInput(
           controller: _chatController,
           onSend: _handleSendMessage,
+          onMicStart: () async {
+            await _voice.connectIfNeeded();
+            await _voice.startCapture();
+          },
+          onMicStop: () async {
+            await _voice.stopCapture();
+          },
         ),
       ],
     );
