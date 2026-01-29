@@ -103,6 +103,7 @@ class _ChatScreenState extends State<ChatScreen> {
       appBar: CommonAppBar(
         title: '챗봇',
         showBackButton: true,
+        showActions: false, // ✅ 우측 아이콘 제거
       ),
 
       body: Column(

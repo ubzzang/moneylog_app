@@ -145,19 +145,10 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
 
     return Scaffold(
       backgroundColor: Colors.grey[50], // (2번) 배경 Home 톤에 맞춤
-      appBar: AppBar(
-        backgroundColor: _primaryBlue, // (1번) 상단 톤 파란색
-        foregroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: false,
-        title: Text(
-          _titleText,
-          style: const TextStyle(
-            fontFamily: 'GmarketSans', // (6번)
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
-          ),
-        ),
+      appBar: CommonAppBar(
+        title: _titleText,      // 수입등록/지출등록 제목 유지
+        showBackButton: true,   // 왼쪽 뒤로가기
+        showActions: false,     // ✅ 오른쪽 아이콘(+/채팅) 제거
       ),
       body: SafeArea(
         child: SingleChildScrollView(
