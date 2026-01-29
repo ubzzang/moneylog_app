@@ -51,8 +51,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       appBar: CommonAppBar(
         title: '통계',
         showBackButton: true,
+        showActions: false,
       ),
-      endDrawer: MenuDrawer(isLoggedIn: widget.isLoggedIn),
+      //endDrawer: MenuDrawer(isLoggedIn: widget.isLoggedIn),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
           : SingleChildScrollView(

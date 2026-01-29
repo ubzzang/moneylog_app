@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+
 class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final VoidCallback? onStatisticsPressed;
   final VoidCallback? onChatPressed;
   final VoidCallback? onAddPressed; //영랑 추가
   final bool showBackButton;
+  final bool showActions;
 
   const CommonAppBar({
     super.key,
@@ -14,6 +16,7 @@ class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.onChatPressed,
     this.onAddPressed, // 영랑 추가
     this.showBackButton = false,
+    this.showActions = true,
   });
 
   @override
@@ -53,20 +56,20 @@ class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
         // + 버튼
       actionsPadding: const EdgeInsets.only(right: 4), // ✅ 여기 값을 0~4로 조절
-      actions: [
+      actions: showActions
+          ? [
         IconButton(
           onPressed: onAddPressed,
           icon: const Icon(Icons.add_rounded, color: Colors.white),
         ),
-        // chat 버튼
         IconButton(
           icon: const Icon(Icons.chat, color: Colors.white),
           onPressed: onChatPressed,
         ),
+        const SizedBox(width: 0),
+      ]
+          : null, // ✅ 완전히 제거 (공간도 없음)
 
-        // ✅ 이게 “오른쪽 끝 여백”을 컨트롤하는 핵심
-        const SizedBox(width: 0), // 0~8 사이로 조절해봐
-      ],
 
     );
   }
