@@ -157,12 +157,7 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // 상단 토글(수입등록 / 지출등록)
-              _TypeToggle(
-                type: _type,
-                onIncome: () => _switchType(TxType.income),
-                onExpense: () => _switchType(TxType.expense),
-                selectedColor: _skyBlueSelected, // (3번)
-              ),
+              _buildTypeSelector(),
               const SizedBox(height: 16),
 
               // 날짜
@@ -272,8 +267,8 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
                     child: ElevatedButton(
                       onPressed: _submit,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF4C7BED), // (8번) 등록 버튼 파랑
-                        foregroundColor: Colors.white, // (8번) 글자 흰색
+                        backgroundColor: const Color(0xFF00B274),
+                        foregroundColor: Colors.white,
                         minimumSize: const Size.fromHeight(46),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10), // (5번) 곡선 축소
@@ -294,6 +289,48 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
       ),
     );
   }
+
+
+  Widget _buildTypeSelector() {
+    final isIncome = _type == TxType.income;
+
+    ButtonStyle style(bool selected) {
+      return ElevatedButton.styleFrom(
+        backgroundColor: selected ? const Color(0xFF4C7BED) : Colors.grey[300],
+        foregroundColor: selected ? Colors.white : Colors.black,
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: const StadiumBorder(), // ✅ 알약(캡슐) 모양으로 통일
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () => _switchType(TxType.income),
+            style: style(isIncome),
+            child: const Text(
+              '수입등록',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () => _switchType(TxType.expense),
+            style: style(!isIncome),
+            child: const Text(
+              '지출등록',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
 
   InputDecoration _inputDecoration({String? hintText}) {
     return InputDecoration(
