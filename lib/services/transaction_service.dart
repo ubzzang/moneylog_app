@@ -32,7 +32,7 @@ class TransactionService {
   }) async {
     // 토큰 가져오기
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+    final String? token = prefs.getString('token');
 
     // query params 구성
     final queryParams = {

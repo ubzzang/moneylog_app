@@ -145,7 +145,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           ),
           Text(
             dateText,
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           IconButton(
             icon: Icon(Icons.chevron_right, color: Color(0xFF4C7BED)),
@@ -242,7 +242,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         children: [
           Text(
             '소비 분석',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 16),
           // 카테고리별 막대
@@ -320,7 +320,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         children: [
           Text(
             '수입 / 지출 비교',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 24),
           SizedBox(
