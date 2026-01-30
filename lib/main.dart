@@ -32,6 +32,7 @@ class MyApp extends StatelessWidget {
       // 추가종료
       //home: const HomeScreen(isLoggedIn: false),
       home: const LoginScreen(),
+
     );
   }
 }

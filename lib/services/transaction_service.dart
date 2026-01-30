@@ -32,7 +32,7 @@ class TransactionService {
   }) async {
     // 토큰 가져오기
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+    final String? token = prefs.getString('token');
 
     // query params 구성
     final queryParams = {
@@ -79,6 +79,61 @@ class TransactionService {
 
     final uri = Uri.parse('$BASE_URL/member/$mid/day')
         .replace(queryParameters: queryParams);
+
+    return http.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+  }
+
+  // 거래내역 수정
+  Future<http.Response> updateTransaction({
+    required Map<String, dynamic> transaction,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    final uri = Uri.parse(BASE_URL);
+
+    return http.put(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(transaction),
+    );
+  }
+
+  // 거래내역 삭제
+  Future<http.Response> deleteTransaction({
+    required String transactionId,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    final uri = Uri.parse('$BASE_URL/$transactionId');
+
+    return http.delete(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+  }
+
+  // 거래내역 상세보기
+  Future<http.Response> getTransaction({
+    required String transactionId,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    final uri = Uri.parse('$BASE_URL/$transactionId');
 
     return http.get(
       uri,

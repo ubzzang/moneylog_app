@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
 
-
 class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final VoidCallback? onStatisticsPressed;
   final VoidCallback? onChatPressed;
-  final VoidCallback? onAddPressed; //영랑 추가
+  final VoidCallback? onAddPressed;
+  final VoidCallback? onMyPagePressed; // ✅ 추가됨
   final bool showBackButton;
   final bool showActions;
+  final bool showMyPageButton; // ✅ 추가됨
 
   const CommonAppBar({
     super.key,
     required this.title,
     this.onStatisticsPressed,
     this.onChatPressed,
-    this.onAddPressed, // 영랑 추가
+    this.onAddPressed,
+    this.onMyPagePressed,
     this.showBackButton = false,
     this.showActions = true,
+    this.showMyPageButton = false
   });
 
   @override
@@ -54,8 +57,7 @@ class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
         ],
       ),
-        // + 버튼
-      actionsPadding: const EdgeInsets.only(right: 4), // ✅ 여기 값을 0~4로 조절
+      actionsPadding: const EdgeInsets.only(right: 4),
       actions: showActions
           ? [
         IconButton(
@@ -66,14 +68,16 @@ class CommonAppBar extends StatelessWidget implements PreferredSizeWidget {
           icon: const Icon(Icons.chat, color: Colors.white),
           onPressed: onChatPressed,
         ),
+        if (showMyPageButton)
+          IconButton(
+            icon: const Icon(Icons.person, color: Colors.white),
+            onPressed: onMyPagePressed,
+          ),
         const SizedBox(width: 0),
       ]
-          : null, // ✅ 완전히 제거 (공간도 없음)
-
-
+          : null,
     );
   }
-
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
