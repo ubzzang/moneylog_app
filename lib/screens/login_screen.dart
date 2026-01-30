@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'home_screen.dart';
 import 'signup_screen.dart';
@@ -264,6 +265,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       if (response.statusCode == 200) {
+        final prefs = await SharedPreferences.getInstance();
         final data = jsonDecode(response.body);
 
         // 토큰 저장
@@ -274,6 +276,16 @@ class _LoginScreenState extends State<LoginScreen> {
         if (data['id'] != null) {
           await _authService.saveMid(data['id']);
         }
+
+        await prefs.setString('username', data['username'] ?? '');
+        await prefs.setString('name', data['name'] ?? '');
+        await prefs.setString('nickname', data['nickname'] ?? '');
+
+        print('저장된 정보:');
+        print('username: ${prefs.getString('username')}');
+        print('name: ${prefs.getString('name')}');
+        print('nickname: ${prefs.getString('nickname')}');
+
         _showSnackBar('로그인에 성공했습니다.');
 
         // 로그인 후 홈화면으로 이동

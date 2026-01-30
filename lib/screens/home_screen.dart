@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:moneylog_app/screens/chat_screen.dart';
+import 'package:moneylog_app/screens/password_verification_screen.dart';
 import 'package:moneylog_app/screens/statistics_screen.dart';
 import 'package:moneylog_app/services/auth_service.dart';
 import 'package:moneylog_app/services/transaction_service.dart';
@@ -60,10 +61,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      resizeToAvoidBottomInset: true, // 키보드 올라올 때 화면 조정
+      resizeToAvoidBottomInset: true,
       appBar: CommonAppBar(
         title: '달력',
-
+        showMyPageButton: true,
         onStatisticsPressed: () {
           Navigator.push(
             context,
@@ -94,7 +95,17 @@ class _HomeScreenState extends State<HomeScreen> {
             _loadMonthData(_focusedDay);
           }
         },
-
+        // 마이페이지
+        onMyPagePressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const PasswordVerificationScreen(
+                targetRoute: '/mypage',
+              ),
+            ),
+          );
+        },
         onChatPressed: () {
           Navigator.push(
             context,
