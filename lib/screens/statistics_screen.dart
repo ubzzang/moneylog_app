@@ -88,12 +88,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                 });
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: _viewMode == 'daily' ? Color(0xFF4C7BED) : Colors.grey[300],
+                backgroundColor: _viewMode == 'daily' ? Color(0xFF3C76F1) : Colors.grey[300],
                 foregroundColor: _viewMode == 'daily' ? Colors.white : Colors.black,
                 elevation: 0,
                 padding: EdgeInsets.symmetric(vertical: 12),
               ),
-              child: Text('일간뷰', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: Text('일간뷰', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
             ),
           ),
           SizedBox(width: 12),
@@ -111,7 +111,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                 elevation: 0,
                 padding: EdgeInsets.symmetric(vertical: 12),
               ),
-              child: Text('월간뷰', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: Text('월간뷰', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
             ),
           ),
         ],
@@ -145,7 +145,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           ),
           Text(
             dateText,
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
           ),
           IconButton(
             icon: Icon(Icons.chevron_right, color: Color(0xFF4C7BED)),
@@ -242,7 +242,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         children: [
           Text(
             '소비 분석',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
           ),
           SizedBox(height: 16),
           // 카테고리별 막대
@@ -320,7 +320,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         children: [
           Text(
             '수입 / 지출 비교',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
           ),
           SizedBox(height: 24),
           SizedBox(

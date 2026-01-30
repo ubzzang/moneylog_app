@@ -47,7 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // 타이틀
                 Text(
-                  '캐시톡',
+                  '토크페이',
                   style: TextStyle(
                     fontSize: 36,
                     fontWeight: FontWeight.bold,
