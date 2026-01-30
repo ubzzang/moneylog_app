@@ -2,12 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/transaction_service.dart';
 import 'package:moneylog_app/widgets/common_appbar.dart';
+import 'package:moneylog_app/screens/home_screen.dart'; // Transaction 클래스 import
 
 enum TxType { income, expense }
 
 class TransactionFormPage extends StatefulWidget {
   final int mid;
-  const TransactionFormPage({super.key, required this.mid});
+  final Transaction? transaction; // 수정할 거래내역 (null이면 신규 등록)
+
+  const TransactionFormPage({
+    super.key,
+    required this.mid,
+    this.transaction, // 선택적 파라미터
+  });
 
   @override
   State<TransactionFormPage> createState() => _TransactionFormPageState();
@@ -30,12 +37,29 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
   List<String> get _currentCategories =>
       _type == TxType.income ? _incomeCategories : _expenseCategories;
 
-  String get _titleText => _type == TxType.income ? '수입등록' : '지출등록';
+  String get _titleText => widget.transaction == null
+      ? (_type == TxType.income ? '수입등록' : '지출등록')
+      : (_type == TxType.income ? '수입수정' : '지출수정');
 
   // (공통 컬러)
-  static const Color _primaryBlue = Color(0xFF157AFF);
-  static const Color _skyBlueSelected = Color(0xFFBFE6FF); // (3번) 탭 선택 색: 하늘색
+  static const Color _primaryBlue = Color(0xFF3C76F1);
+  static const Color _skyBlueSelected = Color(0xFFBFE6FF);
   static const Color _darkText = Color(0xFF2C3E50);
+
+  @override
+  void initState() {
+    super.initState();
+
+    // 수정 모드인 경우 기존 데이터 로드
+    if (widget.transaction != null) {
+      final tx = widget.transaction!;
+      _date = tx.date;
+      _amountCtrl.text = tx.amount.toInt().toString();
+      _memoCtrl.text = tx.memo;
+      _category = tx.category;
+      _type = tx.type.toUpperCase() == 'INCOME' ? TxType.income : TxType.expense;
+    }
+  }
 
   @override
   void dispose() {
@@ -58,14 +82,14 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
           data: ThemeData(
             fontFamily: 'Pretendard',
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF4C7BED),   // 파란 포인트
+              primary: Color(0xFF4C7BED),
               onPrimary: Colors.white,
               onSurface: Color(0xFF2C3E50),
             ),
-            dialogBackgroundColor: Colors.white, // 흰 배경
+            dialogBackgroundColor: Colors.white,
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
-                foregroundColor: Color(0xFF4C7BED), // 취소/확인 파란색
+                foregroundColor: Color(0xFF4C7BED),
               ),
             ),
           ),
@@ -116,16 +140,28 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
     };
 
     try {
-      final res = await TransactionService().register(payload);
+      var res;
+
+      // 수정 모드인지 신규 등록인지 구분
+      if (widget.transaction != null) {
+        // 수정 모드
+        payload['id'] = int.parse(widget.transaction!.id);
+        res = await TransactionService().updateTransaction(
+          transaction: payload,
+        );
+      } else {
+        // 신규 등록 모드
+        res = await TransactionService().register(payload);
+      }
 
       if (res.statusCode == 200 || res.statusCode == 201) {
-        _toast('등록 완료!');
+        _toast(widget.transaction == null ? '등록 완료!' : '수정 완료!');
         FocusScope.of(context).unfocus();
         await Future.delayed(const Duration(milliseconds: 80));
         if (!mounted) return;
         Navigator.pop(context, true);
       } else {
-        _toast('등록 실패: ${res.statusCode}');
+        _toast(widget.transaction == null ? '등록 실패: ${res.statusCode}' : '수정 실패: ${res.statusCode}');
       }
     } catch (e) {
       _toast('네트워크 오류가 발생했어요.');
@@ -134,7 +170,7 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
 
   void _toast(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg, style: const TextStyle(fontFamily: 'Pretendard'))), // (6번)
+      SnackBar(content: Text(msg, style: const TextStyle(fontFamily: 'Pretendard'))),
     );
   }
 
@@ -144,11 +180,11 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
         '${_date.year.toString().padLeft(4, '0')}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}';
 
     return Scaffold(
-      backgroundColor: Colors.grey[50], // (2번) 배경 Home 톤에 맞춤
+      backgroundColor: Colors.grey[50],
       appBar: CommonAppBar(
-        title: _titleText,      // 수입등록/지출등록 제목 유지
-        showBackButton: true,   // 왼쪽 뒤로가기
-        showActions: false,     // ✅ 오른쪽 아이콘(+/채팅) 제거
+        title: _titleText, // 수입등록/지출등록/수입수정/지출수정
+        showBackButton: true,
+        showActions: false,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -167,13 +203,13 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
                   onTap: _pickDate,
                   borderRadius: BorderRadius.circular(12),
                   child: InputDecorator(
-                    decoration: _inputDecoration(), // (4번) 포커스 파란 테두리
+                    decoration: _inputDecoration(),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           dateText,
-                          style: const TextStyle(fontFamily: 'Pretendard'), // (6번)
+                          style: const TextStyle(fontFamily: 'Pretendard'),
                         ),
                         const Icon(Icons.calendar_today_outlined, size: 18),
                       ],
@@ -183,15 +219,15 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
               ),
               const SizedBox(height: 14),
 
-// 카테고리 드롭다운
+              // 카테고리 드롭다운
               _LabeledRow(
                 label: '카테고리',
                 child: Theme(
                   data: Theme.of(context).copyWith(
-                    canvasColor: Colors.white, // 펼친 메뉴 배경 흰색
+                    canvasColor: Colors.white,
                   ),
                   child: DropdownButtonFormField<String>(
-                    isExpanded: true, // 메뉴 폭 = 버튼 폭
+                    isExpanded: true,
                     value: _category,
                     items: _currentCategories
                         .map(
@@ -215,15 +251,14 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
               ),
               const SizedBox(height: 14),
 
-
               // 금액
               _LabeledRow(
                 label: '금액',
                 child: TextFormField(
                   controller: _amountCtrl,
                   keyboardType: TextInputType.number,
-                  decoration: _inputDecoration(hintText: '숫자만 입력'), // (4번)
-                  style: const TextStyle(fontFamily: 'Pretendard', color: _darkText), // (6번)
+                  decoration: _inputDecoration(hintText: '숫자만 입력'),
+                  style: const TextStyle(fontFamily: 'Pretendard', color: _darkText),
                 ),
               ),
               const SizedBox(height: 14),
@@ -234,8 +269,8 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
                 child: TextFormField(
                   controller: _memoCtrl,
                   maxLines: 6,
-                  decoration: _inputDecoration(hintText: '메모를 입력하세요'), // (4번)
-                  style: const TextStyle(fontFamily: 'Pretendard', color: _darkText), // (6번)
+                  decoration: _inputDecoration(hintText: '메모를 입력하세요'),
+                  style: const TextStyle(fontFamily: 'Pretendard', color: _darkText),
                 ),
               ),
               const SizedBox(height: 24),
@@ -250,12 +285,12 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
                         backgroundColor: Color(0xFFFFFFFF),
                         minimumSize: const Size.fromHeight(46),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10), // (5번) 곡선 축소
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         side: const BorderSide(color: Color(0xFFE5E7EB)),
                         foregroundColor: _darkText,
                         textStyle: const TextStyle(
-                          fontFamily: 'Pretendard', // (6번)
+                          fontFamily: 'Pretendard',
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -269,16 +304,16 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF00B274),
                         foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(46),
+                        minimumSize: const Size.fromHeight(50),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10), // (5번) 곡선 축소
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         textStyle: const TextStyle(
-                          fontFamily: 'Pretendard', // (6번)
+                          fontFamily: 'Pretendard',
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      child: const Text('등록'),
+                      child: Text(widget.transaction == null ? '등록' : '수정'),
                     ),
                   ),
                 ],
@@ -290,17 +325,16 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
     );
   }
 
-
   Widget _buildTypeSelector() {
     final isIncome = _type == TxType.income;
 
     ButtonStyle style(bool selected) {
       return ElevatedButton.styleFrom(
-        backgroundColor: selected ? const Color(0xFF4C7BED) : Colors.grey[300],
+        backgroundColor: selected ? const Color(0xFF3C76F1) : Colors.grey[300],
         foregroundColor: selected ? Colors.white : Colors.black,
         elevation: 0,
         padding: const EdgeInsets.symmetric(vertical: 12),
-        shape: const StadiumBorder(), // ✅ 알약(캡슐) 모양으로 통일
+        shape: const StadiumBorder(),
       );
     }
 
@@ -312,7 +346,7 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
             style: style(isIncome),
             child: const Text(
               '수입등록',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
           ),
         ),
@@ -323,7 +357,7 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
             style: style(!isIncome),
             child: const Text(
               '지출등록',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
           ),
         ),
@@ -331,122 +365,29 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
     );
   }
 
-
   InputDecoration _inputDecoration({String? hintText}) {
     return InputDecoration(
       hintText: hintText,
       hintStyle: const TextStyle(
-        fontFamily: 'Pretendard', // (6번)
+        fontFamily: 'Pretendard',
         color: Color(0xFF9CA3AF),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12), // (5번) 너무 둥글지 않게
+        borderRadius: BorderRadius.circular(4),
         borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: _primaryBlue, width: 2), // (4번) 클릭 시 파란 테두리
+        borderRadius: BorderRadius.circular(4),
+        borderSide: const BorderSide(color: _primaryBlue, width: 2),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       filled: true,
-      fillColor: Colors.white, // (2번) 입력폼은 흰색
+      fillColor: Colors.white,
     );
   }
 }
 
-// ---------------- UI 컴포넌트들 ----------------
-
-class _TypeToggle extends StatelessWidget {
-  final TxType type;
-  final VoidCallback onIncome;
-  final VoidCallback onExpense;
-  final Color selectedColor;
-
-  const _TypeToggle({
-    required this.type,
-    required this.onIncome,
-    required this.onExpense,
-    required this.selectedColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isIncome = type == TxType.income;
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _ToggleButton(
-              text: '수입등록',
-              selected: isIncome,
-              onTap: onIncome,
-              selectedColor: selectedColor,
-            ),
-          ),
-          Expanded(
-            child: _ToggleButton(
-              text: '지출등록',
-              selected: !isIncome,
-              onTap: onExpense,
-              selectedColor: selectedColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ToggleButton extends StatelessWidget {
-  final String text;
-  final bool selected;
-  final VoidCallback onTap;
-  final Color selectedColor;
-
-  const _ToggleButton({
-    required this.text,
-    required this.selected,
-    required this.onTap,
-    required this.selectedColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? selectedColor : Colors.white, // (3번) 선택 시 하늘색
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          text,
-          style: const TextStyle(
-            fontFamily: 'GmarketSans', // (6번)
-            fontSize: 15, // (7번) 탭 글자 키움
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF2C3E50),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
+// 나머지 _LabeledRow 위젯은 그대로 유지
 class _LabeledRow extends StatelessWidget {
   final String label;
   final Widget child;
@@ -466,7 +407,7 @@ class _LabeledRow extends StatelessWidget {
               label,
               style: const TextStyle(
                 fontSize: 14,
-                fontFamily: 'Pretendard', // (6번)
+                fontFamily: 'Pretendard',
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF2C3E50),
               ),

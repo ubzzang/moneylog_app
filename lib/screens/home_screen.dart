@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:moneylog_app/screens/chat_screen.dart';
 import 'package:moneylog_app/screens/statistics_screen.dart';
 import 'package:moneylog_app/services/auth_service.dart';
@@ -162,6 +163,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: TableCalendar(
+          locale: 'ko_KR',
           firstDay: DateTime.utc(2020, 1, 1),
           lastDay: DateTime.utc(2030, 12, 31),
           focusedDay: _focusedDay,
@@ -637,7 +639,7 @@ class _HomeScreenState extends State<HomeScreen> {
           top: 20,
           left: 16,
           right: 16,
-          bottom: 150,
+          bottom: 50,
         ),
         itemCount: _transactions.length,
         itemBuilder: (context, index) {
@@ -649,68 +651,248 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildTransactionItem(Transaction transaction) {
     final isIncome = transaction.type.toLowerCase() == 'income';
-    return Container(
-      margin: EdgeInsets.only(bottom: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 6,
-            offset: Offset(0, 2),
+
+    // 카테고리별 아이콘
+    IconData getIconForCategory(String category, bool isIncome) {
+      if (isIncome) {
+        // 수입 카테고리 아이콘
+        switch (category) {
+          case '월급':
+            return Icons.account_balance_wallet;
+          case '용돈':
+            return Icons.card_giftcard;
+          case '부수입':
+            return Icons.monetization_on;
+          default:
+            return Icons.arrow_upward;
+        }
+      } else {
+        // 지출 카테고리 아이콘
+        switch (category) {
+          case '외식':
+            return Icons.restaurant;
+          case '배달':
+            return Icons.delivery_dining;
+          case '교통':
+            return Icons.directions_car;
+          case '쇼핑':
+            return Icons.shopping_bag;
+          case '생활':
+            return Icons.home;
+          case '기타':
+            return Icons.more_horiz;
+          default:
+            return Icons.wallet;
+        }
+      }
+    }
+
+    return Slidable(
+      key: Key(transaction.id),
+      // 왼쪽 스와이프
+      endActionPane: ActionPane(
+        motion: const DrawerMotion(),
+        children: [
+          // 수정 버튼
+          SlidableAction(
+            onPressed: (context) async {
+              await _editTransaction(transaction);
+            },
+            backgroundColor: Color(0xFF9E76D9),
+            foregroundColor: Colors.white,
+            label: '수정',
+            borderRadius: BorderRadius.circular(16),
+          ),
+          SlidableAction(
+            onPressed: (context) async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: Text('삭제 확인'),
+                    content: Text('이 거래내역을 삭제하시겠습니까?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: Text('취소'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: Text('삭제', style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  );
+                },
+              );
+              if (confirmed == true) {
+                await _deleteTransaction(transaction.id);
+              }
+            },
+            backgroundColor: Color(0xFFCC3433),
+            foregroundColor: Colors.white,
+            label: '삭제',
+            borderRadius: BorderRadius.circular(16),
           ),
         ],
       ),
-      child: ListTile(
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: isIncome
-                ? Color(0xFF00B274).withOpacity(0.1)
-                : Color(0xFFFE4040).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(
-            isIncome ? Icons.arrow_upward : Icons.wallet,
-            color: isIncome ? Color(0xFF00B274) : Color(0xFFFE4040),
-            size: 22,
-          ),
+      child: Container(
+        margin: EdgeInsets.only(bottom: 6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 6,
+              offset: Offset(0, 2),
+            ),
+          ],
         ),
-        title: Text(
-          transaction.category,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
-        subtitle: transaction.memo.isNotEmpty
-            ? Padding(
-          padding: EdgeInsets.only(top: 4),
-          child: Text(
-            transaction.memo,
-            style: TextStyle(
-              fontFamily: 'Pretendard',
-              fontSize: 13,
-              color: Colors.grey[600],
+        child: ListTile(
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          leading: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: isIncome
+                  ? Color(0xFF00B274).withOpacity(0.1)
+                  : Color(0xFFFE4040).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              getIconForCategory(transaction.category, isIncome),
+              color: isIncome ? Color(0xFF00B274) : Color(0xFFFE4040),
+              size: 22,
             ),
           ),
-        )
-            : null,
-        trailing: Text(
-          '${isIncome ? '+' : '-'}${transaction.amount.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}원',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            fontFamily: 'Pretendard',
-            color: isIncome ? Color(0xFF00B274) : Color(0xFFFE4040),
+          title: Text(
+            transaction.category,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          subtitle: transaction.memo.isNotEmpty
+              ? Padding(
+            padding: EdgeInsets.only(top: 4),
+            child: Text(
+              transaction.memo,
+              style: TextStyle(
+                fontFamily: 'Pretendard',
+                fontSize: 13,
+                color: Colors.grey[600],
+              ),
+            ),
+          )
+              : null,
+          trailing: Text(
+            '${isIncome ? '+' : '-'}${transaction.amount.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}원',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              fontFamily: 'Pretendard',
+              color: isIncome ? Color(0xFF00B274) : Color(0xFFFE4040),
+            ),
           ),
         ),
       ),
     );
+  }
+
+  // 거래내역 수정
+  Future<void> _editTransaction(Transaction transaction) async {
+    final mid = await _authService.getMid();
+    if (mid == null) return;
+
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TransactionFormPage(
+          mid: mid,
+          transaction: transaction, // 수정할 거래내역 전달
+        ),
+      ),
+    );
+
+    if (changed == true) {
+      _loadTransactions(_selectedDay);
+      _loadMonthData(_focusedDay);
+    }
+  }
+
+  //거래내역 삭제
+  Future<void> _deleteTransaction(String transactionId) async {
+    try {
+      final response = await _transactionService.deleteTransaction(
+        transactionId: transactionId,
+      );
+
+      if (response.statusCode == 200) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 12),
+                Text('거래내역이 삭제되었습니다'),
+              ],
+            ),
+            backgroundColor: Color(0xFF213864),
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+
+        // 데이터 새로고침
+        _loadTransactions(_selectedDay);
+        _loadMonthData(_focusedDay);
+      } else if (response.statusCode == 403) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('본인의 거래내역만 삭제할 수 있습니다'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else if (response.statusCode == 404) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('거래내역을 찾을 수 없습니다'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('삭제에 실패했습니다'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('삭제 오류: $e');
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('오류가 발생했습니다'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   void _loadMonthData(DateTime focusedDay) async {
