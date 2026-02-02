@@ -45,10 +45,62 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.isLoggedIn) {
-      _loadMonthData(_focusedDay);
-    }
+
+    // ✅ chat_screen과 동일: Voice WS 이벤트/에러를 홈에서도 수신 처리
+    _voice.onError = (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    };
+
+    _voice.onEvent = (evt) {
+      if (!mounted) return;
+      final type = (evt['type'] ?? '').toString();
+
+      if (type == 'stt_final') {
+        final text = (evt['text'] ?? '').toString().trim();
+        if (text.isNotEmpty) {
+          // 유저의 음성 입력을 SnackBar로 표시
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('인식: $text'),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+
+
+      // 서버 LLM 최종 응답: 홈에서는 스낵바로 표시(채팅 화면처럼 메시지 리스트가 없기 때문)
+      if (type == 'llm_final') {
+        final reply = (evt['reply'] ?? '').toString();
+        if (reply.isNotEmpty) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(reply),
+              duration: const Duration(seconds: 4),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        // 음성으로 거래 등록/삭제/수정 등이 수행되었을 수 있으므로 즉시 UI 갱신
+        if (widget.isLoggedIn) {
+          _loadMonthData(_focusedDay);
+        }
+      }
+
+    };
   }
+
 
   @override
   void dispose() {
