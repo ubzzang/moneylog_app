@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:moneylog_app/screens/chat_message_list.dart';
+import 'package:moneylog_app/screens/example_prompts_widget.dart';
 import 'package:moneylog_app/screens/statistics_screen.dart';
 import 'package:moneylog_app/widgets/common_appbar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/chat_message.dart';
 import '../widgets/chat_input.dart';
@@ -28,6 +30,7 @@ class _ChatScreenState extends State<ChatScreen> {
     ),
   ];
   bool _isTyping = false;
+  bool _showExamples = true; // 예시 프롬프트 표시 여부
 
   void _showToast(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -42,6 +45,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    _loadExamplePromptVisibility();
 
     _voice.onError = (e) {
       if (!mounted) return;
@@ -60,6 +64,7 @@ class _ChatScreenState extends State<ChatScreen> {
             _messages.add(ChatMessage(text: text, isUser: true));
             _isTyping = true; // 이후 llm 처리 중일 가능성
           });
+          _hideExamplesForToday(); // 메시지 전송 시 예시 숨김
           // 답변 후 스크롤
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (_scrollController.hasClients) {
@@ -95,6 +100,42 @@ class _ChatScreenState extends State<ChatScreen> {
     };
   }
 
+  // 하루 기준 프롬프트 표시
+  Future<void> _loadExamplePromptVisibility() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastHiddenDate = prefs.getString('example_prompts_hidden_date');
+    final today = DateTime.now().toIso8601String().split('T')[0]; // YYYY-MM-DD
+
+    // 저장된 날짜가 오늘이 아니면 예시 프롬프트 표시
+    if (lastHiddenDate != today) {
+      setState(() {
+        _showExamples = true;
+      });
+    } else {
+      setState(() {
+        _showExamples = false;
+      });
+    }
+  }
+
+  // 오늘 하루 동안 예시 프롬프트 숨김
+  Future<void> _hideExamplesForToday() async {
+    final prefs = await SharedPreferences.getInstance();
+    final today = DateTime.now().toIso8601String().split('T')[0]; // YYYY-MM-DD
+    await prefs.setString('example_prompts_hidden_date', today);
+
+    setState(() {
+      _showExamples = false;
+    });
+  }
+
+  // 입력창에 복사됨
+  void _handlePromptTap(String prompt) {
+    setState(() {
+      _chatController.text = prompt;
+    });
+    _hideExamplesForToday(); // 하루 동안 숨김
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -103,16 +144,30 @@ class _ChatScreenState extends State<ChatScreen> {
       appBar: CommonAppBar(
         title: '챗봇',
         showBackButton: true,
-        showActions: false, // ✅ 우측 아이콘 제거
+        showActions: false,
       ),
 
       body: Column(
         children: [
           Expanded(
-            child: ChatMessageList(
-              messages: _messages,
-              isTyping: _isTyping,
-              scrollController: _scrollController,
+            child: Stack(
+              children: [
+                ChatMessageList(
+                  messages: _messages,
+                  isTyping: _isTyping,
+                  scrollController: _scrollController,
+                ),
+                // 예시 프롬프트는 초기 상태에만 표시
+                if (_showExamples && _messages.length == 1)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: ExamplePromptsWidget(
+                      onPromptTap: _handlePromptTap,
+                    ),
+                  ),
+              ],
             ),
           ),
           Divider(height: 1),
@@ -141,6 +196,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _messages.add(ChatMessage(text: userMessage, isUser: true));
       _isTyping = true;
     });
+    _hideExamplesForToday(); // 하루동안 숨김!!!!!!!!
 
     // 스크롤을 최하단으로
     WidgetsBinding.instance.addPostFrameCallback((_) {
