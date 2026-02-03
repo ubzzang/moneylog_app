@@ -709,10 +709,11 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: (context) async {
               await _editTransaction(transaction);
             },
-            backgroundColor: Color(0xFF9E76D9),
-            foregroundColor: Colors.white,
+            backgroundColor: Color(0xFFD8E4FC),
+            foregroundColor: Color(0xFF157AFF),
+            icon: Icons.mode_edit_outline,
             label: '수정',
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(0),
           ),
           SlidableAction(
             onPressed: (context) async {
@@ -739,10 +740,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 await _deleteTransaction(transaction.id);
               }
             },
-            backgroundColor: Color(0xFFCC3433),
+            backgroundColor: Color(0xFF157AFF),
             foregroundColor: Colors.white,
             label: '삭제',
-            borderRadius: BorderRadius.circular(16),
+            icon: Icons.delete_outline,
+            borderRadius: BorderRadius.circular(0),
           ),
         ],
       ),
